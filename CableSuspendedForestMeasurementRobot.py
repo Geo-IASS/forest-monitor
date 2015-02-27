@@ -23,10 +23,10 @@
 # 
 # The lack of obstacles above the canopy permits automated positioning of the platform, and therefore routine automated measurement.  
 
-# <codecell>
+# <markdowncell>
 
-LiDAR
-http://www.velodynelidar.com/lidar/hdlproducts/hdl32e.aspx
+# LiDAR
+# http://www.velodynelidar.com/lidar/hdlproducts/hdl32e.aspx
 
 # <headingcell level=2>
 
@@ -78,7 +78,6 @@ cs.showCable(c)
 
 # The horizontal components of each of the three cables' tension must cancel for the platform to be static.
 # The ratios between the cables' Th is determined by the horizontal alignment of the system components only.  The three Th values are adjusted up or down by the same amount to control the platform's z value.  Note that the ratios between net tension in the cable will not necessarily remain constant.
-# 
 
 # <codecell>
 
@@ -93,7 +92,6 @@ pres.showExampleSystem()
 # * horizontal shift of the platform as load applied to the bob.
 # * equipment used for target practice
 # * theft of equipment, particularly cable
-# 
 
 # <headingcell level=3>
 
@@ -126,12 +124,11 @@ ts = lb2n(4000) # N
 
 # Nomenclature
 
-# <codecell>
+# <markdowncell>
 
-bob/plummet/descender
-
-platform/nexus/
-
+# bob/plummet/descender
+# 
+# platform/nexus/
 
 # <headingcell level=2>
 
@@ -166,45 +163,51 @@ platform/nexus/
 # The system is suited to cove locations with steep sides. 
 # 
 # As an exercise, we shall specify a system to provide coverage of most of watershed 18, which contains 3 high value plots.
-# 
 
 # <codecell>
 
-reload(coweeta)
+import coweeta
 import osgeo.ogr as oo
 sws = oo.Open('coweeta_subwatersheds/coweeta_subwatersheds.dbf')
 l = sws.GetLayerByIndex(0)
 numFeat = l.GetFeatureCount()
-print(numFeat)
+# print('numFeat', numFeat)
 f = l.GetFeature(0)
 gr = f.GetGeometryRef()
-print 'feat', f
+# print('feat', f)
 
 plt.figure(figsize=(12,8))
 ax = plt.subplot(111)
 # c.combPlot([0,0], [1e7,1e7], ax)
+
+import json
+jd = json.JSONDecoder()
 for i in range(numFeat):
+    
     f = l.GetFeature(i)
     gr = f.GetGeometryRef()
     # print gr
-    p = np.array(gr.GetPoints())
-    print 'GetPoints', p.shape
-        #print p.shape,
-        #print np.min(p), np.max(p)
-    #z = c.surface(p)
-    x = p[:,0]
-    y = p[:,1]
-        #print x.shape, y.shape, z.shape
-        #print y
-        #print z
-        #print
+    geom = gr.ExportToJson()
+
+
+    struct = jd.decode(geom)
+    
+    coords = struct['coordinates'][0]
+
+    x, y = [[ss[i] for ss in coords] for i in [0,1]]
+
     ax.plot(x, y) # , z,'r')
 
 # <codecell>
 
 import coweeta
-reload(coweeta)
+plt.figure(figsize=(12,8))
 coweeta.doWire()
+
+# <codecell>
+
+plt.figure(figsize=(12,8))
+coweeta.doStream()
 
 # <headingcell level=2>
 
@@ -212,19 +215,18 @@ coweeta.doWire()
 
 # <markdowncell>
 
-# $20000 for 9m blimp with max 3kg payload  http://www.eblimp.com/eblimp/Blimp_Packages.html
+# $20000 for 9m blimp with max 3kg payload http://www.eblimp.com/eblimp/Blimp_Packages.html
 # 
-# http://www.theblimpworks.com/30blimp.htm  30 ft. Advertising Blimps   $4919  LENGTH = 30 FT.    VOLUME = 1510 CUBIC FT.
-# DIAMETER = 10'    NET LIFT = 47.1 POUNDS
+# http://www.theblimpworks.com/30blimp.htm 30 ft. Advertising Blimps $4919 LENGTH = 30 FT. VOLUME = 1510 CUBIC FT. DIAMETER = 10' NET LIFT = 47.1 POUNDS
 # 
-# http://www.galaxyblimps.com/outdoor50.html
-# 50' 
+# http://www.galaxyblimps.com/outdoor50.html 50'
 # 
-# 12m
-# http://www.islinc.com/REAPInformationSheet.pdf
+# 12m http://www.islinc.com/REAPInformationSheet.pdf
 # 
-# Underslung raft system
-# http://www.lindstrandtech.com/aerostat-main/airships/thermal-airships/
+# Underslung raft system http://www.lindstrandtech.com/aerostat-main/airships/thermal-airships/
 # 
 # http://www.cleyet-marrel.com/site/Arboglisseur-Presentation.41c72.html?lang=en
+
+# <codecell>
+
 
