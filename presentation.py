@@ -60,6 +60,16 @@ def showTcsCables3d(ax, tcs):
         ax.plot(x, y, z, 'b')
 
 
+def showTcsCables2d(ax, tcs):
+
+    for i in range(3):
+        ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], 'g')
+        ax.plot([tcs.p[i][0]], [tcs.p[i][1]], 'ro')
+        ax.text(tcs.p[i][0], tcs.p[i][1], 'M{}'.format(i+1))
+    ax.plot([tcs.pb[0]], [tcs.pb[1]], 'ro')
+
+
+
 
 def showInstallation3d(ax, itcs, nwLoc, swLoc):
     x, y, z = itcs.terrain.surfaceMesh(nwLoc, swLoc)
@@ -76,6 +86,15 @@ def showInstallation3d(ax, itcs, nwLoc, swLoc):
 
     showTcsCables(ax, itsc.tsc)
 
+
+def showInstallation2d(ax, itcs, nwLoc, swLoc):
+    x, y, z = itcs.terrain.surfaceMesh(nwLoc, swLoc)
+    ax.contour(x, y, z, 20, cmap=cm.coolwarm)
+    x, y, z = itcs.terrain.wsBoundary(18)
+
+    ax.plot(x, y, 'k')
+
+    showTcsCables2d(ax, itcs.tcs)
 
 
 def mast(ax, x, y, zb, zt):

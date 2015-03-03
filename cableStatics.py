@@ -146,8 +146,9 @@ class TriCableSystem:
         self.dirVec = [dirVec(self.pb, self.p[i]) for i in range(3)]
 
 
+
     def tensionAtMasts(self):
-        return [self.c[i].tension(self.c[i].w) for i in range(3)]
+        return [self.c[i].tension(0) for i in range(3)]
 
 
     def simpleForces(self):
@@ -157,12 +158,14 @@ class TriCableSystem:
         b = np.array([0, 0, self.weight])
         tensions = np.linalg.solve(A,b)
         self.th = [tensions[i] * planMag(self.dirVec[i]) for i in range(3)]
+        if min(self.th) < 0:
+            raise RuntimeError('Negative tension')
 
 
     def setup(self):
         self.c = [0,0,0]
         for i in range(3):
-            self.c[i] = Cable(self.pb[2], self.p[i][2], horizDist(self.pb, self.p[i]), self.unitWeight)
+            self.c[i] = Cable(self.p[i][2], self.pb[2], horizDist(self.p[i], self.pb), self.unitWeight)
 
 
     def tryth(self, k):
@@ -170,8 +173,8 @@ class TriCableSystem:
             self.c[i].setHorizForce(self.th[i] * k)
             self.c[i].solveParams()
 
-        vf = np.sum([self.c[i].verticalForce(0) for i in range(3)])
-        error = self.weight - vf
+        vf = np.sum([self.c[i].verticalForce(self.c[i].w) for i in range(3)])
+        error = self.weight + vf
         return error
 
 

@@ -28,17 +28,19 @@ class InstalledTCS:
         self.tcs.tune()
 
 
-    def getCableClearance(self):
+    def getCableClearance(self, resolution):
 
         d = range(3)
         zc = range(3)
         zg = range(3)
+        minClear = range(3)
 
         for i in range(3):
-            x = np.linspace(self.tcs.pb[0], self.tcs.p[i][0], 50)
-            y = np.linspace(self.tcs.pb[1], self.tcs.p[i][1], 50)
+            numPoints = np.ceil(self.tcs.c[i].w / resolution)
+            x = np.linspace(self.tcs.p[i][0], self.tcs.pb[0], numPoints)
+            y = np.linspace(self.tcs.p[i][1], self.tcs.pb[1], numPoints)
 
-            d[i] = np.linspace(0, self.tcs.c[i].w, 50)
+            d[i] = np.linspace(0, self.tcs.c[i].w, numPoints)
             zc[i] = self.tcs.c[i].cableZ(d[i])
 
             loc = np.array((x, y)).transpose()
@@ -47,7 +49,9 @@ class InstalledTCS:
 
             zg[i] = self.terrain.surface(loc)
 
-        return d, zc, zg
+            minClear[i] = min(zc[i] - zg[i])
+
+        return d, zc, zg, min(minClear)
 
 
 

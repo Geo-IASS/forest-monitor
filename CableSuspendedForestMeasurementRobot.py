@@ -229,6 +229,7 @@ for i in range(numFeat):
 
 reload(coweeta)
 reload(pres)
+reload(cs)
 from matplotlib import cm
 
 cow = coweeta.Coweeta()
@@ -252,46 +253,83 @@ import installation as inst
 # <codecell>
 
 reload(inst)
+reload(pres)
+reload(cs)
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
-itcs.positionMasts([p1,p2,p3],[10,10,10])
+itcs.positionMasts([p1,p2,p3],[10,10,20])
 itcs.positionPlatform([3000, 1100], 50, 200)
 
-
-itcs.tcs.p
-
-d, zc, zg = itcs.getCableClearance()
-
-plt.figure(figsize=(16,8))
-
-axt = range(3)
-axb = range(3)
-axt[0] = plt.subplot(231, aspect='equal')
-axt[1] = plt.subplot(232, sharex=axt[0], sharey=axt[0], aspect='equal')
-axt[2] = plt.subplot(233, sharex=axt[0], sharey=axt[0], aspect='equal')
-
-axb[0] = plt.subplot(234, sharex=axt[0])
-axb[1] = plt.subplot(235, sharex=axt[0], sharey=axb[0])
-axb[2] = plt.subplot(236, sharex=axt[0], sharey=axb[0])
-
-plt.setp(axt[1].get_yticklabels(), visible=False)
-plt.setp(axt[2].get_yticklabels(), visible=False)
-plt.setp(axb[1].get_yticklabels(), visible=False)
-plt.setp(axb[2].get_yticklabels(), visible=False)
-axt[0].set_ylabel('height [m]')
-axb[0].set_ylabel('altitude [m]')
-for i in range(3):
-
-    axt[i].plot(d[i], zc[i], 'b')
-    axt[i].plot(d[i], zg[i], 'g')
-    axt[i].plot(d[i][0], zc[i][0], 'ro')
-    axt[i].plot([d[i][-1], d[i][-1]], [zc[i][-1], zg[i][-1]], 'r')
-    axt[i].set_xlabel('distance from mast {} [m]'.format(i+1))
+def posPlatform(x, y, height, weight):
+    itcs.positionPlatform([x, y], height, weight)
     
-    axb[i].plot(d[i], zc[i] - zg[i], 'b')
+    d, zc, zg, mc = itcs.getCableClearance(resolution=10)
+
+    print mc
+    print itcs.tcs.tensionAtMasts()
+    
+    plt.figure(figsize=(16,12))
+
+    axt = range(3)
+    axb = range(3)
+    
+    ax = plt.subplot(331)
+    pres.showInstallation2d(ax, itcs, [2000,500], [3500,1500])
+    
+    axt[0] = plt.subplot(334, aspect='equal')
+    axt[1] = plt.subplot(335, sharex=axt[0], sharey=axt[0], aspect='equal')
+    axt[2] = plt.subplot(336, sharex=axt[0], sharey=axt[0], aspect='equal')
+
+    axb[0] = plt.subplot(337, sharex=axt[0])
+    axb[1] = plt.subplot(338, sharex=axt[0], sharey=axb[0])
+    axb[2] = plt.subplot(339, sharex=axt[0], sharey=axb[0])
+
+    plt.setp(axt[1].get_yticklabels(), visible=False)
+    plt.setp(axt[2].get_yticklabels(), visible=False)
+    plt.setp(axb[1].get_yticklabels(), visible=False)
+    plt.setp(axb[2].get_yticklabels(), visible=False)
     
     
+    axt[0].set_ylabel('elevation [m]')
+    axb[0].set_ylabel('clearance [m]')
+    for i in range(3):
+
+        axt[i].plot(d[i], zc[i], 'b-')
+        axt[i].plot(d[i], zg[i], 'g-')
+        axt[i].plot(d[i][-1], zc[i][-1], 'ro')
+        axt[i].plot([0, 0], [zc[i][0], zg[i][0]], 'r-')
+        
+        axt[i].set_xlabel('distance from mast {} [m]'.format(i+1))
+
+        axb[i].plot(d[i], zc[i] - zg[i], 'b')
+
     
+
+# <codecell>
+
+from IPython.html.widgets import interact
+# p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
+
+interact(posPlatform, x=(2332,3175), y=(790,1280), height=(0, 200), weight=(0, 400))
+
+# <codecell>
+
+itcs.tcs.tensionAtMasts()
+
+# <codecell>
+
+itcs.tcs.dirVec
+
+# <codecell>
+
+wx = [itcs.tcs.c[i].w for i in range(3)]
+print [itcs.tcs.c[i].th for i in range(3)]
+
+print np.sum([itcs.tcs.c[i].verticalForce(wx[i]) for i in range(3)])
+print [itcs.tcs.c[i].verticalForce(0) for i in range(3)]
+
+# <codecell>
+
 
 # <headingcell level=2>
 
