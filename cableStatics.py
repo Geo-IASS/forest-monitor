@@ -33,7 +33,7 @@ class Cable:
 
     def length(self):
         # Returns the total length of cable from start to end
-        return (self.a * (np.sinh((self.w - self.x0) / self.a) - np.sinh((- self.xc) / self.a)))
+        return (self.a * (np.sinh((self.w - self.xc) / self.a) - np.sinh((- self.xc) / self.a)))
 
 
     def verticalForce(self, x):
@@ -154,12 +154,14 @@ class TriCableSystem:
     def simpleForces(self):
         # Compute the tensions required if massless cables were used.  This is a
         # starting point for computing the tensions for cables with mass.
+        # Returns True if all cables will be in tension.
         A = np.transpose(np.array([self.dirVec[0], self.dirVec[1], self.dirVec[2]]))
         b = np.array([0, 0, self.weight])
         tensions = np.linalg.solve(A,b)
         self.th = [tensions[i] * planMag(self.dirVec[i]) for i in range(3)]
-        if min(self.th) < 0:
-            raise RuntimeError('Negative tension')
+        # Check that all the cables are in tension, none are under compression.
+        return min(self.th) > 0
+
 
 
     def setup(self):
@@ -170,7 +172,7 @@ class TriCableSystem:
 
     def tryth(self, k):
         for i in range(3):
-            self.c[i].setHorizForce(self.th[i] * k)
+            self.c[i].setHorizForce(self.th[i] * k[0])
             self.c[i].solveParams()
 
         vf = np.sum([self.c[i].verticalForce(self.c[i].w) for i in range(3)])
@@ -179,12 +181,16 @@ class TriCableSystem:
 
 
     def tune(self):
-        self.simpleForces()
+        okay = self.simpleForces()
+        if not okay:
+            return False
+
         self.setup()
 
         res = spipyopt.leastsq(self.tryth, [1])
         k = res[0][0]
         self.th *= k
+        return True
 
 
     def getStatus(self):

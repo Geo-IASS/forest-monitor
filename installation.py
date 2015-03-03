@@ -25,7 +25,7 @@ class InstalledTCS:
         z = self.terrain.surface(xyPos) + height
         pb = [xyPos[0], xyPos[1], z]
         self.tcs.setLoad(pb, weight)
-        self.tcs.tune()
+        return self.tcs.tune()
 
 
     def getCableClearance(self, resolution):
@@ -57,47 +57,54 @@ class InstalledTCS:
 
 
 
-#    def tensionMap(self, resolution, ter, load, thresh):
-#
-#        import matplotlib.path as mplp
-#
-#        def roundRange(vals, res):
-#            start = np.floor(np.min(vals) / res) * res
-#            end = np.ceil(np.max(vals) / res) * res
-#            return np.arange(start, end + res / 2, res)
-#
-#
-#        xr = roundRange([tcs.p[i][0] for i in range(3)], resolution)
-#        yr = roundRange([tcs.p[i][1] for i in range(3)], resolution)
-#
-#        bp = np.array([[tcs.p[i][j] for j in range(2)] for i in range(3)])
-#        # print(bp)
-#        bounds = mplp.Path(bp, np.array([1, 2, 2], dtype='uint8'), closed=True)
-#
-#        ten = [np.ones((yr.size, xr.size)) * np.NaN for i in range(3)]
-#
-#        for xi in range(len(xr)):
-#            x = xr[xi]
-#            for yi in range(len(yr)):
-#                y = yr[yi]
-#                p = (x,y)
-#                if bounds.contains_point(p):
-#                    z = ter.surface(p) + 2
-#                    tcs.setLoad((x,y,z), load)
-#                    tcs.tune()
-#                    if max([tcs.c[i].tension()[1] for i in range(3)]) < thresh:
-#                        for i in range(3):
-#                            ten[i][yi,xi] = tcs.tensionAtMasts()[i]
-#
-#
-#        x,y = np.meshgrid(xr, yr)
-#        # print x.shape, y.shape, ten[0].shape
-#        ax = plt.subplot(111, projection='3d')
-#        ax.plot_wireframe(x, y, ten[0], color='r')
-#        ax.plot_wireframe(x, y, ten[1], color='g')
-#        ax.plot_wireframe(x, y, ten[2], color='b')
-#        plt.xlabel('x')
-#        plt.ylabel('y')
-#        plt.show()
-#
-#
+    def tensionMap(self, cableRes, gridRes, minClearance, maxTension, weight):
+
+        import matplotlib.path as mplp
+
+        def roundRange(vals, res):
+            start = np.floor(np.min(vals) / res) * res
+            end = np.ceil(np.max(vals) / res) * res
+            return np.arange(start, end + res / 2, res)
+
+        xr = roundRange([self.tcs.p[i][0] for i in range(3)], gridRes)
+        yr = roundRange([self.tcs.p[i][1] for i in range(3)], gridRes)
+
+        bp = np.array([[self.tcs.p[i][j] for j in range(2)] for i in range(3)])
+        bounds = mplp.Path(bp, np.array([1, 2, 2], dtype='uint8'), closed=True)
+
+        maxTen = np.ones((yr.size, xr.size)) * np.NaN
+        height = np.ones((yr.size, xr.size)) * np.NaN
+        # z = np.ones((yr.size, xr.size)) * np.NaN
+
+        for xi in range(len(xr)):
+            x = xr[xi]
+            for yi in range(len(yr)):
+                y = yr[yi]
+                p = (x,y)
+
+                if bounds.contains_point(p):
+                    print 'point', p,
+
+                    h = 0
+                    cont = True
+                    while cont:
+                        if self.positionPlatform([x, y], h, weight):
+                            d, zc, zg, mc = self.getCableClearance(resolution=cableRes)
+                            if mc < minClearance:
+                                h += 2
+                                print '.',
+                            else:
+                                ten = max(self.tcs.tensionAtMasts())
+                                if ten < maxTension:
+                                    maxTen[yi,xi] = ten
+                                    height[yi,xi] = h
+                                    print h, ten
+                                else:
+                                    print 'overtension'
+                                cont = False
+                        else:
+                            print 'too high'
+                            cont = False
+        return xr, yr, maxTen, height
+
+

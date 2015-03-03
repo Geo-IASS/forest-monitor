@@ -26,7 +26,8 @@ def showExampleSystem3d():
     tcs.setLoad([75, 100, 5], 100)
 
     # Adjust cable tension to achieve desired location.
-    tcs.tune()
+    if not tcs.tune():
+        raise RuntimeError('Not all cables in tension')
 
     # Display
     ax = cs.new3d()
@@ -65,7 +66,7 @@ def showTcsCables2d(ax, tcs):
     for i in range(3):
         ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], 'g')
         ax.plot([tcs.p[i][0]], [tcs.p[i][1]], 'ro')
-        ax.text(tcs.p[i][0], tcs.p[i][1], 'M{}'.format(i+1))
+        ax.text(tcs.p[i][0], tcs.p[i][1], 'mast {}'.format(i+1))
     ax.plot([tcs.pb[0]], [tcs.pb[1]], 'ro')
 
 

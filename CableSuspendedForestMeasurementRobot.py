@@ -235,20 +235,39 @@ from matplotlib import cm
 cow = coweeta.Coweeta()
 cow.loadWatersheds()
 cow.setWorkingRefPoint((275000, 3880000))
-ax = pres.new3d()
-x, y, z = cow.surfaceMesh([1500,1500], [4000,4000])
-ax.contour(x, y, z, 20, cmap=cm.coolwarm)
 
-ax.plot_surface(x, y, z, rstride=20, cstride=20, alpha=0.3, linewidth=0)
+# <codecell>
 
-x, y, z = cow.wsBoundary(18)
 
-ax.plot(x, y, z,'k')
+def myPlot(elev, azim):
+    ax = pres.new3d()
+    x, y, z = cow.surfaceMesh([2000,500], [3500,1500])
+    ax.contour(x, y, z, 20, cmap=cm.coolwarm)
 
+    ax.plot_surface(x, y, z, rstride=20, cstride=20, alpha=0.3, linewidth=0)
+
+    x, y, z = cow.wsBoundary(18)
+
+    ax.plot(x, y, z, 'k')
+    
+    ax.view_init(elev=elev, azim=azim)
+
+
+from IPython.html.widgets import interact
+# p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
+
+interact(myPlot, azim=(0, 180), elev=(0, 90))
+    
+
+# <codecell>
+
+ax.elev, ax.azim, ax.dist
+ax.view_init(elev=elev, azim=azim)
 
 # <codecell>
 
 import installation as inst
+from IPython.display import display, HTML
 
 # <codecell>
 
@@ -260,13 +279,31 @@ p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
 itcs.positionMasts([p1,p2,p3],[10,10,20])
 itcs.positionPlatform([3000, 1100], 50, 200)
 
-def posPlatform(x, y, height, weight):
-    itcs.positionPlatform([x, y], height, weight)
-    
-    d, zc, zg, mc = itcs.getCableClearance(resolution=10)
+def tableRow(title, form, vals):
+    return '<tr><th>' + title + '</th>' + ' '.join([('<td>' + form + '</td>').format(x) for x in vals]) + '</tr>\n'
 
-    print mc
-    print itcs.tcs.tensionAtMasts()
+
+def posPlatform(x, y, height, weight):
+    okay = itcs.positionPlatform([x, y], height, weight)
+    if not okay:
+        print 'One or more cables would need to be in compression to position the platform {}m above ({},{})'.format(height,x,y)
+        return
+
+    d, zc, zg, mc = itcs.getCableClearance(resolution=10)
+    
+    if mc < 1.0:
+        attr = ' style="color:red;"'
+    else:
+        attr = ''
+
+    s = '<table>\n'
+    s += tableRow('Cable', '{}', range(1, 4))
+    s += tableRow('Length [m]', '{:0.0f}', [itcs.tcs.c[i].length() for i in range(3)])
+    s += tableRow('Tension [N]', '{:0.0f}', itcs.tcs.tensionAtMasts())
+    s += '</table>\n'
+    s += '<p{}>Minimum clearance: {:0.2f}m</p>\n'.format(attr, mc)
+
+    display(HTML(s))
     
     plt.figure(figsize=(16,12))
 
@@ -275,10 +312,14 @@ def posPlatform(x, y, height, weight):
     
     ax = plt.subplot(331)
     pres.showInstallation2d(ax, itcs, [2000,500], [3500,1500])
-    
-    axt[0] = plt.subplot(334, aspect='equal')
-    axt[1] = plt.subplot(335, sharex=axt[0], sharey=axt[0], aspect='equal')
-    axt[2] = plt.subplot(336, sharex=axt[0], sharey=axt[0], aspect='equal')
+ 
+    # fig, axes = plt.subplots(ncols=3, nrows=2, sharex=True, sharey=True)
+    # plt.setp(axes.flat, aspect=1.0, adjustable='box')
+
+   
+    axt[0] = plt.subplot(334) # , aspect='equal')
+    axt[1] = plt.subplot(335, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
+    axt[2] = plt.subplot(336, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
 
     axb[0] = plt.subplot(337, sharex=axt[0])
     axb[1] = plt.subplot(338, sharex=axt[0], sharey=axb[0])
@@ -294,12 +335,13 @@ def posPlatform(x, y, height, weight):
     axb[0].set_ylabel('clearance [m]')
     for i in range(3):
 
+        plt.setp(axt[i].get_xticklabels(), visible=False)
         axt[i].plot(d[i], zc[i], 'b-')
         axt[i].plot(d[i], zg[i], 'g-')
         axt[i].plot(d[i][-1], zc[i][-1], 'ro')
         axt[i].plot([0, 0], [zc[i][0], zg[i][0]], 'r-')
         
-        axt[i].set_xlabel('distance from mast {} [m]'.format(i+1))
+        axb[i].set_xlabel('distance from mast {} [m]'.format(i+1))
 
         axb[i].plot(d[i], zc[i] - zg[i], 'b')
 
@@ -314,22 +356,23 @@ interact(posPlatform, x=(2332,3175), y=(790,1280), height=(0, 200), weight=(0, 4
 
 # <codecell>
 
-itcs.tcs.tensionAtMasts()
+reload(inst)
+reload(pres)
+reload(cs)
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
+itcs.positionMasts([p1,p2,p3],[10,10,20])
+xr, yr, maxTen, height = itcs.tensionMap(cableRes=10, gridRes=20, minClearance=2, maxTension=1000, weight=200)
 
 # <codecell>
 
-itcs.tcs.dirVec
+plt.contour(xr, yr, height)
+plt.colorbar()
 
 # <codecell>
 
-wx = [itcs.tcs.c[i].w for i in range(3)]
-print [itcs.tcs.c[i].th for i in range(3)]
-
-print np.sum([itcs.tcs.c[i].verticalForce(wx[i]) for i in range(3)])
-print [itcs.tcs.c[i].verticalForce(0) for i in range(3)]
-
-# <codecell>
-
+plt.contour(xr, yr, maxTen)
+plt.colorbar()
 
 # <headingcell level=2>
 
