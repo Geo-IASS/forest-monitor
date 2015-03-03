@@ -1,56 +1,3 @@
-# class Point:
-    # def __init__Point(self, x, y, z):
-        # self.x = x
-        # self.y = y
-        # self.z = z
-#
-#
-#
-# def angles(p):
-    # thetaH = math.atan2(p[1], p[0])
-    # thetaV = math.atan2(p[2], math.sqrt(p[1]^2 + p[0]^2))
-    #
-    # return thetaH, thetaV
-#
-# def p(x,y,z):
-    # return np.array([x,y,z])
-#
-#
-# def mag(p1):
-        # return np.sqrt(np.sum(p1 * p1))
-        #
-        #
-        #
-# def forces(p1, p2, p3):
-    # A = np.transpose(np.array([p1 / mag(p1), p2 / mag(p2), p3 / mag(p3)]))
-    # b = np.array([0,0,1])
-    # return np.linalg.solve(A,b)
-#
-#
-#
-# a = 4000
-# h = 1
-# w = 100
-# def catenary(x, a):
-    # return a * np.cosh(x/a)
-#
-# def cable(x0, a, w, h):
-    # return catenary(x0, a) + h - catenary(w+x0, a)
-#
-#
-# res = leastsq(cable,[0], (4000, 100, 10))
-# x0 = res[0][0]
-# x0
-# y0 = catenary(x0, 4000)
-# x0, y0
-# catenary(x0, 4000)-y0,catenary(x0+100, 4000)-y0
-#
-#
-# x = np.arange(0, w, 0.01)
-# y = catenary(x+x0, a)-y0
-# plt.plot(x,y)
-# plt.show()
-
 
 
 import numpy as np
@@ -76,54 +23,73 @@ class Cable:
         # constant along the cable length.
         self.th = th
         self.a = th / self.unitWeight
+        self.solveParams()
 
 
     def cableZ(self, x):
         # Returns height of cable at vertical position x.
-        return self.a * np.cosh((x - self.x0) / self.a) - self.z0
+        return self.a * np.cosh((x + self.xc) / self.a) + self.zc
 
 
     def length(self):
         # Returns the total length of cable from start to end
-        return (self.a * (np.sinh((self.w - self.x0) / self.a) - np.sinh((- self.x0) / self.a))).flatten()
+        return (self.a * (np.sinh((self.w - self.x0) / self.a) - np.sinh((- self.xc) / self.a)))
 
 
-    def verticalForce(self):
-        # Returns a tuple containing the vertical component of tension at the two
-        # ends of the cable
-        return np.sinh(-self.x0 / self.a) * self.th, -np.sinh((self.w - self.x0) / self.a) * self.th
+    def verticalForce(self, x):
+        # Returns a tuple containing the vertical component of tension at
+        # vertical location x
+
+        return np.sinh((x + self.xc) / self.a) * self.th
 
 
-    def tension(self):
-        # Returns a tuple containing the total tension at the two ends of the cable
-        fv = self.verticalForce()
-        return np.sqrt(np.square(fv)  + np.square(self.th)).flatten()
-
-
-    def cableError(self, x):
-        # Used by solveParams() to establish offsets.  For the right x value
-        # the return value will be zero.
-        return (self.cableZ(x) - self.z1) - (self.cableZ(x + self.w) - self.z2)
+    def tension(self, x):
+        # Returns a tuple containing the total tension at vertical location x
+        fv = self.verticalForce(x)
+        return np.sqrt(np.square(fv)  + np.square(self.th))
 
 
     def solveParams(self):
-        # Determine the vertical and horizontal offsets needed to map the catenary
-        # equation onto our cable.  Uses least squares estimation.
-        self.x0 = 0
-        self.z0 = 0
-        res = spipyopt.leastsq(self.cableError,[0])
-        # print res
-        self.x0 = -res[0][0]
-        self.z0 = self.cableZ(0) - self.z1
+        # Given the specified values for w, z1 and z2, determine the offsets
+        # xc and zc required to match a catenary to our cable.  This is done
+        # algerbraically.  The deriviation of the equation was performed with
+        # the sympy package.
 
-#    def solveForTension(self, t):
-#        # th is a function of net tension at the point and the gradient of the cable
-#
-#        # dz/dx = sinh(x/a) = sinh(x . w /th)
-#
-#        z1, z2, w, t1
-#
-#        need th
+        w = self.w
+        a = self.a
+        zd = self.z2 - self.z1
+
+        # calculate some repeated elements
+        e2wa = np.exp(2 * w / a)
+        ewa = np.exp(w / a)
+        a2 = a ** 2
+
+        # calculate the 3 components
+        c1 = (a2 * e2wa - 2 * a2 * ewa + a2 + zd ** 2 * ewa) * ewa
+        c2 = (-2 * a * e2wa + 2 * a * ewa)
+        c3 = zd / (a * (ewa - 1))
+
+        # Determine the x offset ...
+        self.xc = a * np.log(2 * np.abs(np.sqrt(c1) / c2) + c3)
+
+        # ... and from this the y offset
+        self.zc = self.z1 - a * np.cosh(self.xc / a)
+
+
+    def setTension(self, ten, x):
+        # Calculate the (uniform) horizontal component of tension in the cable
+        # required to give a total tension of 'ten' at location 'x'.
+        # Determined numerically using least squares.
+
+        def error(th):
+            self.setHorizForce(th)
+            calcTen = self.tension(x)
+            return ten - calcTen
+
+        res = spipyopt.leastsq(error, [ten])
+        self.th = res[0][0]
+
+
 
 
 def planMag(v):
@@ -179,23 +145,18 @@ class TriCableSystem:
         # The horizonal direction vectors are fixed.
         self.dirVec = [dirVec(self.pb, self.p[i]) for i in range(3)]
 
-        #TEMP!!! print 'dir vec: ', self.dirVec
+
+    def tensionAtMasts(self):
+        return [self.c[i].tension(self.c[i].w) for i in range(3)]
 
 
     def simpleForces(self):
+        # Compute the tensions required if massless cables were used.  This is a
+        # starting point for computing the tensions for cables with mass.
         A = np.transpose(np.array([self.dirVec[0], self.dirVec[1], self.dirVec[2]]))
-        #cableL = np.sum(dist(self.pb, self.p))
-        #cableW = cableL * self.unitWeight;
-        b = np.array([0, 0, self.weight]) # + cableW / 2])
+        b = np.array([0, 0, self.weight])
         tensions = np.linalg.solve(A,b)
         self.th = [tensions[i] * planMag(self.dirVec[i]) for i in range(3)]
-                   # planVec
-        #TEMP!!! print 'tensions: ', tensions
-        #TEMP!!! print 'ten horiz: ', self.th
-        # print 'ten x: ', [tensions[i] * self.dirVec[i][0] for i in range(3)]
-        # print 'ten x: ', [tensions[i] * self.dirVec[i][1] for i in range(3)]
-        #TEMP!!! print 'ten h x: ', [self.th[i] * self.dirVec[i][0]/planMag(self.dirVec[i]) for i in range(3)]
-        #TEMP!!! print 'ten h y: ', [self.th[i] * self.dirVec[i][1]/planMag(self.dirVec[i]) for i in range(3)]
 
 
     def setup(self):
@@ -209,12 +170,8 @@ class TriCableSystem:
             self.c[i].setHorizForce(self.th[i] * k)
             self.c[i].solveParams()
 
-        #print 'length: ', [self.c[i].length() for i in range(3)]
-        #print 'tension at towers: ', [self.c[i].tension()[1] for i in range(3)]
-        vf = np.sum([self.c[i].verticalForce()[0] for i in range(3)])
-        #print 'vert forces: ', [self.c[i].verticalForce()[0] for i in range(3)]
+        vf = np.sum([self.c[i].verticalForce(0) for i in range(3)])
         error = self.weight - vf
-        #print 'error: ', error
         return error
 
 
@@ -230,102 +187,5 @@ class TriCableSystem:
     def getStatus(self):
         # returns th, tension, cable length
         return
-
-
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from presentation import tower
-
-def new3d():
-    ax = plt.subplot(111, projection='3d')
-    ax.set_xlabel('metres E-W [m]')
-    ax.set_ylabel('metres N-S [m]')
-    ax.set_zlabel('height [m]')
-    return ax
-
-def report(tcs, bobDrop=0, ax=None):
-    doAll = not(ax)
-    if doAll:
-        ax = plt.subplot(111, projection='3d')
-
-    for i in range(3):
-        x = np.linspace(tcs.pb[0], tcs.p[i][0], 50)
-        y = np.linspace(tcs.pb[1], tcs.p[i][1], 50)
-        d = np.linspace(0, tcs.c[i].w, 50)
-        z = tcs.c[i].cableZ(d)
-        ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], [0, 0], 'g')
-        tower(tcs.p[i][0], tcs.p[i][1], 0, tcs.p[i][2], ax)
-        ax.plot(x, y, z, 'b')
-    if bobDrop:
-        ax.plot([tcs.pb[0], tcs.pb[0]], [tcs.pb[1], tcs.pb[1]], [tcs.pb[2], tcs.pb[2]-bobDrop], 'b')
-        ax.plot([tcs.pb[0], tcs.pb[0]], [tcs.pb[1], tcs.pb[1]], [tcs.pb[2], tcs.pb[2]-bobDrop], 'ro')
-    else:
-        ax.plot([tcs.pb[0]], [tcs.pb[1]], [tcs.pb[2]], 'ro')
-
-    ax.set_xlabel('EW direction [m]')
-    ax.set_ylabel('NS direction [m]')
-    ax.set_zlabel('Height [m]')
-
-    if doAll:
-        plt.show()
-
-
-def showCable(cable, ax=None):
-    doAll = not(ax)
-    if doAll:
-        ax = plt.subplot(111)
-        ax.set_title('Suspended Cable')
-    x = np.linspace(0, cable.w, 50)
-    z = cable.cableZ(x)
-    ax.plot([0, cable.w], [cable.z1, cable.z2], 'ro')
-    ax.plot(x,z,'b-')
-    if doAll:
-        plt.show()
-
-
-def tensionMap(tcs, res, ter, load, thresh):
-
-    import matplotlib.path as mplp
-
-    def roundRange(vals, res):
-        start = np.floor(np.min(vals) / res) * res
-        end = np.ceil(np.max(vals) / res) * res
-        return np.arange(start, end + res / 2, res)
-
-
-    xr = roundRange([tcs.p[i][0] for i in range(3)], res)
-    yr = roundRange([tcs.p[i][1] for i in range(3)], res)
-
-    bp = np.array([[tcs.p[i][j] for j in range(2)] for i in range(3)])
-    # print(bp)
-    bounds = mplp.Path(bp, np.array([1, 2, 2], dtype='uint8'), closed=True)
-
-    ten = [np.ones((yr.size, xr.size)) * np.NaN for i in range(3)]
-
-    for xi in range(len(xr)):
-        x = xr[xi]
-        for yi in range(len(yr)):
-            y = yr[yi]
-            p = (x,y)
-            if bounds.contains_point(p):
-                z = ter.surface(p) + 2
-                tcs.setLoad((x,y,z), load)
-                tcs.tune()
-                if max([tcs.c[i].tension()[1] for i in range(3)]) < thresh:
-                    for i in range(3):
-                        ten[i][yi,xi] = tcs.c[i].tension()[1]
-
-
-    x,y = np.meshgrid(xr, yr)
-    # print x.shape, y.shape, ten[0].shape
-    ax = plt.subplot(111, projection='3d')
-    ax.plot_wireframe(x, y, ten[0], color='r')
-    ax.plot_wireframe(x, y, ten[1], color='g')
-    ax.plot_wireframe(x, y, ten[2], color='b')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
-
 
 

@@ -71,7 +71,6 @@ import cableStatics as cs
 
 c = cs.Cable(5, 4, 10, 0.035)
 c.setHorizForce(1)
-c.solveParams()
 cs.showCable(c)
 
 # <markdowncell>
@@ -82,6 +81,7 @@ cs.showCable(c)
 # <codecell>
 
 import presentation as pres
+reload(pres)
 pres.showExampleSystem()
 
 # <markdowncell>
@@ -172,19 +172,22 @@ sws = oo.Open('coweeta_subwatersheds/coweeta_subwatersheds.dbf')
 l = sws.GetLayerByIndex(0)
 numFeat = l.GetFeatureCount()
 # print('numFeat', numFeat)
-f = l.GetFeature(0)
-gr = f.GetGeometryRef()
+#f = l.GetFeature(0)
+#gr = f.GetGeometryRef()
 # print('feat', f)
 
-plt.figure(figsize=(12,8))
+plt.figure(figsize=(14,10))
 ax = plt.subplot(111)
-# c.combPlot([0,0], [1e7,1e7], ax)
 
 import json
 jd = json.JSONDecoder()
 for i in range(numFeat):
     
     f = l.GetFeature(i)
+    
+    ws = f.GetField(0)
+    area = f.GetField(1)/10000
+    # print i, , f.GetField(1), f.GetField(2), f.GetField(3)
     gr = f.GetGeometryRef()
     # print gr
     geom = gr.ExportToJson()
@@ -195,19 +198,100 @@ for i in range(numFeat):
     coords = struct['coordinates'][0]
 
     x, y = [[ss[i] for ss in coords] for i in [0,1]]
+    
+    xc = (min(x) + max(x)) / 2
+    yc = (min(y) + max(y)) / 2
+    
+    ax.plot(x, y, 'r')
+    ax.text(xc, yc, 'WS{}\n{}ha'.format(ws, int(area)), horizontalalignment='center', verticalalignment='center')
+    
 
-    ax.plot(x, y) # , z,'r')
+s = oo.Open('coweeta_streams/coweeta_streams.dbf')
+l = s.GetLayerByIndex(0)
+numFeat = l.GetFeatureCount()
+
+for i in range(numFeat):
+    f = l.GetFeature(i)
+    gr = f.GetGeometryRef()
+    p = np.array(gr.GetPoints())
+
+    x = p[:,0]
+    y = p[:,1]
+
+    ax.plot(x, y,'b')
+
+    
 
 # <codecell>
 
-import coweeta
-plt.figure(figsize=(12,8))
-coweeta.doWire()
 
 # <codecell>
 
-plt.figure(figsize=(12,8))
-coweeta.doStream()
+reload(coweeta)
+reload(pres)
+from matplotlib import cm
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.setWorkingRefPoint((275000, 3880000))
+ax = pres.new3d()
+x, y, z = cow.surfaceMesh([1500,1500], [4000,4000])
+ax.contour(x, y, z, 20, cmap=cm.coolwarm)
+
+ax.plot_surface(x, y, z, rstride=20, cstride=20, alpha=0.3, linewidth=0)
+
+x, y, z = cow.wsBoundary(18)
+
+ax.plot(x, y, z,'k')
+
+
+# <codecell>
+
+import installation as inst
+
+# <codecell>
+
+reload(inst)
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
+itcs.positionMasts([p1,p2,p3],[10,10,10])
+itcs.positionPlatform([3000, 1100], 50, 200)
+
+
+itcs.tcs.p
+
+d, zc, zg = itcs.getCableClearance()
+
+plt.figure(figsize=(16,8))
+
+axt = range(3)
+axb = range(3)
+axt[0] = plt.subplot(231, aspect='equal')
+axt[1] = plt.subplot(232, sharex=axt[0], sharey=axt[0], aspect='equal')
+axt[2] = plt.subplot(233, sharex=axt[0], sharey=axt[0], aspect='equal')
+
+axb[0] = plt.subplot(234, sharex=axt[0])
+axb[1] = plt.subplot(235, sharex=axt[0], sharey=axb[0])
+axb[2] = plt.subplot(236, sharex=axt[0], sharey=axb[0])
+
+plt.setp(axt[1].get_yticklabels(), visible=False)
+plt.setp(axt[2].get_yticklabels(), visible=False)
+plt.setp(axb[1].get_yticklabels(), visible=False)
+plt.setp(axb[2].get_yticklabels(), visible=False)
+axt[0].set_ylabel('height [m]')
+axb[0].set_ylabel('altitude [m]')
+for i in range(3):
+
+    axt[i].plot(d[i], zc[i], 'b')
+    axt[i].plot(d[i], zg[i], 'g')
+    axt[i].plot(d[i][0], zc[i][0], 'ro')
+    axt[i].plot([d[i][-1], d[i][-1]], [zc[i][-1], zg[i][-1]], 'r')
+    axt[i].set_xlabel('distance from mast {} [m]'.format(i+1))
+    
+    axb[i].plot(d[i], zc[i] - zg[i], 'b')
+    
+    
+    
 
 # <headingcell level=2>
 
@@ -226,7 +310,4 @@ coweeta.doStream()
 # Underslung raft system http://www.lindstrandtech.com/aerostat-main/airships/thermal-airships/
 # 
 # http://www.cleyet-marrel.com/site/Arboglisseur-Presentation.41c72.html?lang=en
-
-# <codecell>
-
 
