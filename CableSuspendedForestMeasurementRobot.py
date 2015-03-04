@@ -356,23 +356,57 @@ interact(posPlatform, x=(2332,3175), y=(790,1280), height=(0, 200), weight=(0, 4
 
 # <codecell>
 
+import cableStatics as cs
 reload(inst)
 reload(pres)
 reload(cs)
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
 itcs.positionMasts([p1,p2,p3],[10,10,20])
-xr, yr, maxTen, height = itcs.tensionMap(cableRes=10, gridRes=20, minClearance=2, maxTension=1000, weight=200)
+xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=1500, weight=200)
 
 # <codecell>
 
-plt.contour(xr, yr, height)
-plt.colorbar()
+# airspace volume accessible 
+
+gridRes = 10
+colHigh = zCeil - zGround
+valid = np.isfinite(colHigh)
+volume = np.sum(colHigh[valid]) * gridRes ** 2
+HTML('Accessible airspace volume = {:,}$m^3$'.format(int(volume)))
 
 # <codecell>
 
-plt.contour(xr, yr, maxTen)
-plt.colorbar()
+xws18, yws18, zws18 = itcs.terrain.wsBoundary(18)
+
+def tcsMap(title, arg):
+    plt.figure(figsize=(14,10))
+    
+    plt.jet()
+
+    ax = plt.subplot(111, aspect='equal')
+    cs = plt.contourf(xr, yr, arg)
+    #ax.clabel(cs, inline=1, fontsize=10)
+    ax.set_title(title)
+    ax.plot(xws18, yws18, 'k')
+
+    # xr, yr, zceil
+    plt.colorbar()
+
+
+    for i in range(3):
+        ax.plot([itcs.tcs.p[i][0]], [itcs.tcs.p[i][1]], 'ro')
+        ax.text(itcs.tcs.p[i][0], itcs.tcs.p[i][1], 'mast {}'.format(i+1))
+
+# <codecell>
+
+tcsMap('Maximum Elevation of Platform [m]', zCeil)
+tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
+tcsMap('Height Range of Platform [m]', zCeil - zFloor)
+tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
+tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
+
 
 # <headingcell level=2>
 

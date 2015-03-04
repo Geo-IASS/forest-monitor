@@ -55,9 +55,12 @@ class InstalledTCS:
 
 
 
+    def platformMap(self, cableRes, gridRes, heightRes, minClearance, maxTension, weight):
 
-
-    def tensionMap(self, cableRes, gridRes, minClearance, maxTension, weight):
+        def prog(ch):
+            import sys
+            sys.stdout.write(ch)
+            sys.stdout.flush()
 
         import matplotlib.path as mplp
 
@@ -72,39 +75,86 @@ class InstalledTCS:
         bp = np.array([[self.tcs.p[i][j] for j in range(2)] for i in range(3)])
         bounds = mplp.Path(bp, np.array([1, 2, 2], dtype='uint8'), closed=True)
 
-        maxTen = np.ones((yr.size, xr.size)) * np.NaN
-        height = np.ones((yr.size, xr.size)) * np.NaN
-        # z = np.ones((yr.size, xr.size)) * np.NaN
+        floorTen = np.ones((yr.size, xr.size)) * np.NaN
+        zFloor = np.ones((yr.size, xr.size)) * np.NaN
+        zCeil = np.ones((yr.size, xr.size)) * np.NaN
+        zGround = np.ones((yr.size, xr.size)) * np.NaN
 
-        for xi in range(len(xr)):
-            x = xr[xi]
-            for yi in range(len(yr)):
-                y = yr[yi]
+        for yi in range(len(yr)):
+            y = yr[yi]
+            prog('>')
+            for xi in range(len(xr)):
+                x = xr[xi]
                 p = (x,y)
 
-                if bounds.contains_point(p):
-                    print 'point', p,
+                if not bounds.contains_point(p):
+                    prog('.')
 
-                    h = 0
-                    cont = True
-                    while cont:
-                        if self.positionPlatform([x, y], h, weight):
-                            d, zc, zg, mc = self.getCableClearance(resolution=cableRes)
-                            if mc < minClearance:
-                                h += 2
-                                print '.',
-                            else:
-                                ten = max(self.tcs.tensionAtMasts())
-                                if ten < maxTension:
-                                    maxTen[yi,xi] = ten
-                                    height[yi,xi] = h
-                                    print h, ten
-                                else:
-                                    print 'overtension'
-                                cont = False
-                        else:
-                            print 'too high'
-                            cont = False
-        return xr, yr, maxTen, height
+                    continue
 
+                ceiling = self.tcs.ceiling(p)
+                floor = self.terrain.surface(p)
+
+                dist = ceiling - floor
+
+                if dist < 0:
+                    prog('x')
+
+                    continue
+                step = dist * 0.5
+                z = floor + step
+
+                while step > heightRes:
+                    step *= 0.5
+                    p3 = (x,y,z)
+                    self.tcs.setLoad(p3, weight)
+
+                    if not self.tcs.tune():
+                        raise RuntimeError('ceiling error')
+                    ten = max(self.tcs.tensionAtMasts())
+                    if ten > maxTension:
+                        z -= step
+                    else:
+                        lastGoodZ = z
+                        z += step
+                p3 = (x,y,lastGoodZ)
+                self.tcs.setLoad(p3, weight)
+                if not self.tcs.tune():
+                    raise RuntimeError('ceiling error')
+                d, zc, zg, mc = self.getCableClearance(resolution=cableRes)
+                if mc < minClearance:
+                    prog('_') # print '_', # mc < minClearance'
+                    continue
+
+                zCeil[yi,xi] = lastGoodZ
+                zGround[yi,xi] = floor
+
+                dist = lastGoodZ - floor
+                if dist < 0:
+                    raise RuntimeError('ceiling through floor')
+                step = dist * 0.5
+                z = floor + step
+
+                while step > heightRes:
+                    step *= 0.5
+                    p3 = (x,y,z)
+                    self.tcs.setLoad(p3, weight)
+                    if not self.tcs.tune():
+                        raise RuntimeError('ceiling error')
+                    d, zc, zg, mc = self.getCableClearance(resolution=cableRes)
+
+                    if mc < minClearance:
+                        z += step;
+                    else:
+                        lastGoodZ = z
+                        ten = max(self.tcs.tensionAtMasts())
+                        z -= step;
+
+                prog(chr(0x40 + int(z / 20) % 26))
+                floorTen[yi,xi] = ten
+                zFloor[yi,xi] = lastGoodZ
+            prog('<\n')
+
+
+        return xr, yr, zCeil, zFloor, zGround, floorTen
 

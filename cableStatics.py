@@ -135,6 +135,7 @@ class TriCableSystem:
 
         self.p = anchors
         self.unitWeight = unitWeight
+        self.calcCeiling()
 
 
     def setLoad(self, pb, weight):
@@ -193,8 +194,21 @@ class TriCableSystem:
         return True
 
 
-    def getStatus(self):
+    def calcCeiling(self):
+        A = np.array([self.p[i] for i in range(3)])
+        A[:,2] = 1
+        b = np.array([self.p[i][2] for i in range(3)])
+
+        self.ceilK = np.linalg.solve(A,b)
+
+
+    def ceiling(self, loc):
+        # Returns the elevation of the ceiling plane at (x,y)
+        return np.sum(self.ceilK  * [loc[0], loc[1], 1])
+
+
+
+    # def getStatus(self):
         # returns th, tension, cable length
-        return
 
 
