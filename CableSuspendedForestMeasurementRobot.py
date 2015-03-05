@@ -3,7 +3,7 @@
 
 # <headingcell level=1>
 
-# Investigation into Feasibility of a Permanent Cable Based Canopy Access System at Coweeta
+# Investigation into Feasibility of a Permanent Cable Based Canopy Access System at Coweeta Hydrologic Laboratory
 
 # <markdowncell>
 
@@ -15,13 +15,19 @@
 
 # <markdowncell>
 
-# Collecting data from forests at Coweeta is a labour intensive exercise.  The difficulty increases with vertical distance from the forest floor.  Conducting measurement in and above the canopy is particularly problematic.  What methods exist, such as slingshotting ropes into the canopy, are haphazard and potentially dangerous as operators need to be positioned below.  
+# Collecting data from forests is a labour intensive exercise.  The difficulty increases with vertical distance from the forest floor.  Conducting measurement in and above the canopy is particularly problematic.  What methods exist, such as slingshotting ropes into the canopy, are haphazard and potentially dangerous as operators need to be positioned below.  
 # 
-# This document investigates the feasability of a permanently installed cable-suspended parallel robot that traverses the airspace above the canopy for a selected study site.
+# This document investigates the feasability of a permanently installed cable-suspended parallel robot that traverses the airspace above the canopy of a selected study site.
 # 
 # The system consists of three masts that project above the canopy on hill slopes above the study site.  From each mast a cable runs to a suspended platform.  That platform can be positioned at any point in the airspace above the canopy by combinations of winching in/playing out cable from the masts.  The platform houses a fourth winch that positions a bob below it.  This bob would house measurement equipment and would decend to the canopy and below.
 # 
 # The lack of obstacles above the canopy permits automated positioning of the platform, and therefore routine automated measurement.  
+
+# <codecell>
+
+import presentation as pres
+reload(pres)
+pres.showExampleSystem()
 
 # <markdowncell>
 
@@ -78,12 +84,6 @@ cs.showCable(c)
 # The horizontal components of each of the three cables' tension must cancel for the platform to be static.
 # The ratios between the cables' Th is determined by the horizontal alignment of the system components only.  The three Th values are adjusted up or down by the same amount to control the platform's z value.  Note that the ratios between net tension in the cable will not necessarily remain constant.
 
-# <codecell>
-
-import presentation as pres
-reload(pres)
-pres.showExampleSystem()
-
 # <markdowncell>
 
 # Considerations
@@ -99,11 +99,11 @@ pres.showExampleSystem()
 
 # <markdowncell>
 
-# 1/4" kevlar
+# The cable used to support the platform needs to have high tensile strength, low elasticity and low mass.  It needs to be abrasion resistant and UV stabilised.  It also needs to be available in a single lengths that can span the installation.  An ideal candidate is polyester/kevlar kernmantle rope such as http://www.pelicanrope.com/kevlarropes.html
 # 
-# http://www.pelicanrope.com/kevlarropes.html
+# The 1/4" offering from this manufacturer is sufficient for our purposes.  There are able to supply the cable in lengths over 1000m  At these lengths cost is around $1 per metre.
 # 
-# 1/4" 	3/4" 	4,000 lbs. 	2.4 lb/100ft
+# The cable that the bob decends on does not need to be as high performance.  It will be exposed to greater abrasion through being spoolled more frequently and from contact with vegetation.  Use of a fibre with greater elasticity (dynamic rather than static rope) may protect the bob, platform and kevlar cabling from shock loads such as the bob dropping a short distance from a branch. 
 
 # <codecell>
 
@@ -136,20 +136,20 @@ ts = lb2n(4000) # N
 
 # <markdowncell>
 
-# The design of the cable robot is simplified by the absence of snags.  Tensioning of the cables would keep the platform and all cables at a safe distance above the highest trees to avoid snagging.  If the system is to employ a bob the descends into the canopy and below the care will have to be paid to minimising and managing snags.  
+# The design of the cable robot is simplified by the absence of snags.  Tensioning of the cables would keep the platform and all cables at a safe distance above the highest trees to avoid snagging.  If the system is to employ a bob the descends into the canopy and below then care will have to be paid to minimising and managing snags.  
 # 
 # * Use imaging/lidar to identify clear descent columns
 # * Monitor position and tilt of the bob as it descends
 # * Have the bob descend on a single line
 # * Construct the bob so that its centre of gravity is low
 # * Employ a teardrop profile to aid extraction
-# * Rate the cables and mast to cater for an extraction force to pull through snags
+# * Rate the cables and masts to cater for an extraction force to pull through snags
 # * Allow the bob line to be unspooled completely so that if upwards extraction is prevented then the bob might be lowered to the ground for manual retrieval.  Carry enough bob cable to reach the ground.
 # 
-# If the bob were to be lowered on two, reasonably well spaced lines through uninterupted space then the horizontal orientation of the bob might be fixed by those two lines.  The presence of branches and other vegetation would interfer with this arrangement.  Use of two lines increases the likelihood of snagging so this proposal uses a single line.  For all but simple point measurements (temperature/atmosphere samples) the orientation of the bob matters.  
+# If the bob were to be lowered on two reasonably well spaced lines through uninterupted space then the horizontal orientation of the bob might be fixed by those two lines.  The presence of branches and other vegetation would interfer with this arrangement.  Use of two lines increases the likelihood of snagging so this proposal uses a single line.  For all but simple point measurements (temperature/atmosphere samples) the orientation of the bob matters.  
 # 
 # * Rotate and stabilise the bob using a coaxial reaction wheel.
-# * use fans to blow air to rotate the bob.   
+# * use fans and ducts to blow air to rotate the bob.   
 # * allow the bob to rotate freely but record the orientation to allow correction post measurement.
 # 
 # The design of the bob involves a number of technical risks.
@@ -357,6 +357,22 @@ def posPlatform(x, y, height, weight):
         axb[i].plot(d[i], zc[i] - zg[i], 'b')
 
     
+
+# <markdowncell>
+
+# # Modelling an Example System
+# As part of a feasibility investigation, we will pick a site within the Coweeta and model an installation that covers it.  Watershed 18 has been identified as a high value site that might warrant such as significant long term investment.  
+# 
+# * There are three long term study plots in WS18: 118, 218 and 318.  
+# * Its steep slopes are favorable to the cable system.  
+# * It has reticulated electricity located nearby (where the service road reaches the boundary of WS17)
+# * Masts installed on it would have line of sight to the Coweeta buiding complex allowing radio/microwave telemetry
+# 
+# ## Mast Positioning
+# 
+# To minimise required mast height, they are best placed on or near ridge lines overlooking the site.  Two locations are apparent for WS18: its southernmost and easternmost corners.  These are both situated high above the catchment.  The south mast is 300m from powerThe third mast location is more tricky.  The northern corner of the catchment is its bottom and provides no advantage of elevation.  A mast at this location would need to extend well above the canopy.  An alternative is to place the third mast well west of WS18.  The obvious location would be near to the ridge of high top.  This is a significant distance from the other two masts - around 850m.  As there is no power at High Top the cable would need to be winched at another mast and run through a pulley at the High Top mast.  So the total cable length would need to be twice this distance, plus allowance for droop, of the order of 2km long.  This would be particularly susceptable to wind effects.  Another disadvantage of using High Top is that the northern third of WS18 is not covered.
+# 
+# 
 
 # <markdowncell>
 
@@ -620,18 +636,128 @@ tcsMapAll()
 
 # ##Further Observations
 # 
-# Increasing the load from 200N to 500N (40lb to 100lb) resulted in an increase of only 50% in cable tension.  It also lowers the minimum operating envelope by a number of metres over much of the range.
+# * Increasing the load from 200N to 500N (40lb to 100lb) resulted in an increase of only 50% in cable tension.  It also lowers the minimum operating envelope by a number of metres over much of the range.
+# 
+
+# <markdowncell>
+
+# #Masts
+# The masts would need to be steadied by guy lines, particularly to resist the pull from the kevlar cable.  A candidate would be the Rohn 45G guyed tower system (http://www.rohnnet.com/rohn-45g-tower).  A structural engineer would need to be retained to design the masts.  The mast may need to be positioned below ridge lines to allow the guys to be adequately anchored.  There is also an approval process that must be followed to ensure public safety and protection of cultural and natural values.
+# 
+
+# <markdowncell>
+
+# 
+# ##Occupational Health and Safety Considerations
+# 
+# A cable suspended robot operating in a forest introduces some additional OHS considerations:
+# 
+# * Hazard from platform and bob falling on someone
+# * Hazard of branches falling
+# * Cables snapping
+# * unauthorised access of masts
+# * electrical safety around winches
+# * OHS during installation
+# * fire hazard
+# 
+# The system and its operation would need to comply with FS OHS requirements. 
+# 
+# ### Overhead Hazards
+# 
+# Should a system failure cause the platform/bob assembly to free fall to the ground it would hit at $v = \sqrt{ 2 g h }$ with $g = 9.8ms^2$ and h being height in $m$.  So for a drop of 50m, the impact speed is $v \approx 30 ms^{-1} \approx 71mph$
+# 
+# The system operating overhead may increase the likelihood of branches being dislodged and falling.  A protocol would need to be developed to exclude staff from the area that the platform is operating.  Should human intervention be required - for example unsnagging the bob then the system would need to be under manual control.
+# 
+# Stategies to protecting the general public from falling hazards might include:
+# 
+# * installing the system in a rarely visited watershed
+# * placing warning signs on access roads and tracks to the site
+# * potentially fitting a beeper to the platform or bob that is sounded when the unit is in motion - similar to the reverse indicator on motor vehicles.
+# 
+# In the example WS18 installation, the heavily utilized Ball Creek Road sits underneath the western reach of the platform range.  The platform and bob could potentially sit 100m above the road surface.  For a 20kg assembly, the gravitational potential energy is $20 * 9.8 * 100 \approx 520kJ$.  The impact speed would be $v \approx 45 ms^{-1} \approx 100mph$.  Keeping the platform west of the road by a safety margin might be a necessary requirement.
+# 
+# ### Cable Snapping
+# 
+# The stored energy in the system can also hazardous through the whiplash of a cable failing.  The strategies employed to limit risk from falling objects will reduce this risk.  In addition:
+# 
+# * We would operate the cables well within their rated limits.  
+# * The platform and bob would be housed during high wind days.
+# * The cables would be automatically monitored for elongation over time by correlating platform position with winch rotation counts.  Wear and damage of the cables' polyester mantle could be performed by cameras located at the mast.
+
+# <markdowncell>
+
+# #Other Considerations
+# 
+# ## Visual Ammenity
+# A cable robot installation will be visible to forest users:
+# * masts are positioned on ridge lines and project well above the canopy
+# * the cables are located well above the canopy, particular in valleys.  Although the platform and bob can be housed when not in operation the cable must still be exposed.
+# * When in operation, the platform and bob would be visible from a distance.
+# 
+# The default cable colour is white.  Less pronounced colours may be available, but impact on UV stability would need to be investigated.  At a distance 1/4" cable may not necessarily be perceivable.  Given that Coweeta is a research forest having a highly visible experiment is not necessarily detrimental.
+# 
+# ## Vandalism
+# The visibility of the installation will attract the curiousity of forest users and potentially attract vandalism.  The thousands of dollars of kevlar cabling might be stolen.  The masts would need to have anticlimb panels fitted.
+# From a security perspective winch assembly would idealy be located above these panels - so long as this doesn't compromise operator safety during servicing.  
+# 
+# 
+# 
+# ## Animal Attack and Infestation
+# Other than the mast bases and guy lines, no component of the installation would be in contact with the ground.  The guys and anticlimb panels would need to prevent animal access in addition to unauthorised human access.
+# 
+# The only ground located component of the system would be the winch assembly.  This might need to be armoured to prevent bear damage.
+# 
+
+# <markdowncell>
+
+# ##System costs
+# 
+# ###Costing of the masts
+# Design, approval, purchase and installation of the three masts is likely to be single greatest initial outlay for the system.  The masts and their guy wires will need to be designed to withstand the significant sideways forces imparted by the cables.  Wind load on the cables as well as directly on the tower must be allowed for.  Being positioned on ridge lines, access for construction is likely to add cost.  The Forest Service mandated inspection and maintenance regime will contribute an ongoing cost.
+# 
+# ### Provision of electrical power
+# The tensioning of the kevlar cables mean that substantial energy is required to position the platform, even if a central winch assembly allows energy harvesting from unwinding cables.  To facilitate reasonable platform travel speeds we would need mains power.  For the example WS18 system this would involve extending the powerline to WS17 by another 300m.
+# 
+# ### Winch Assembly
+# The three cables all terminate at a series of interconnected winches located on one of the masts.  This is powered by three electrical motors and each winch would have an electronic brake that can withstand forces imparted by worst case wind events.  The design and manufacture of such an assembly is outside my competency.
+# 
+# ### Electronics and Communications
+# Weight and energy storage are not limiting factors freeing us to use off-the-shelf system components for much of the control system.  Components
+# 
+# The platform, bob and each of the masts would house embedded computers, all interconnected via a Wi-Fi network.  Directional antennas may be required. Each would have GPS recievers.  The masts receivers would provide realtime differential GPS capability to the platform and bob.  Each node would have video camera for monitoring.  The masks would have anemometers to monitor local winds.   
+# * Radio link between Coweeta office complex and the powered mast.  This might be microwave if a appropriately priced system is available.  Alternatively an IEEE 802.11 Wi-Fi link could serve if directional antennas are used.  If the powered mast doesn't have line-of-sight to the offices then communications would be relayed through an unpowered mast.  A suitably sized photovoltaic system would be needed.
+# * Radio link between the platform and the powered mast
+# * Radio link between bob and platform
+# * data storage 
+# 
+# ### Cable Purchase and Replacement
+# The system exposes long lengths of kelvar cable to the elements.  The BOM cost of this cable is around $1 per metre.  The polyester mantle is UV stabilized but will ultimately degrade.  The cable would need to be replaced long before the kevlar core becomes compromised.
+# 
 
 # <markdowncell>
 
 # #Engineering Challenges
 # 
-# ## Initial Threading Of The Cables
+# ## Site Identification
+# 
+# 
+# ## Initial Threading of the Cables
 # Care is taken to keep the mast-platform cables above the canopy.  How should the cable be installed in the first place?  
 # * Nylon fishing line with helium filled balloons attached at regular intervals to render it neutrally buoyant.  
 # * Use a quadrotor to drag the nylon line from one mask to another
 # * 
 # This would need to occur on a windless, sunless day.
+# 
+# This is a high technical risk.  A trial/experiment needs to be conducted prior to undertaking the project.
+# 
+# ## Bob Design/Snag Mitigation
+# 
+# ## Winch Assembly
+# 
+# ## Wind Loading
+# 
+# ## Software
+# 
 # 
 
 # <headingcell level=2>
