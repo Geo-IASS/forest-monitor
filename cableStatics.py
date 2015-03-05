@@ -33,7 +33,7 @@ class Cable:
 
     def length(self):
         # Returns the total length of cable from start to end
-        return (self.a * (np.sinh((self.w - self.xc) / self.a) - np.sinh((- self.xc) / self.a)))
+        return (self.a * (np.sinh((self.w + self.xc) / self.a) - np.sinh((self.xc) / self.a)))
 
 
     def verticalForce(self, x):

@@ -61,13 +61,15 @@ def showTcsCables3d(ax, tcs):
         ax.plot(x, y, z, 'b')
 
 
-def showTcsCables2d(ax, tcs):
+def showTcsCables2d(ax, tcs, showPlat=False):
+    if showPlat:
+        for i in range(3):
+            ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], 'g')
+        ax.plot([tcs.pb[0]], [tcs.pb[1]], 'ro')
 
     for i in range(3):
-        ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], 'g')
         ax.plot([tcs.p[i][0]], [tcs.p[i][1]], 'ro')
         ax.text(tcs.p[i][0], tcs.p[i][1], 'mast {}'.format(i+1))
-    ax.plot([tcs.pb[0]], [tcs.pb[1]], 'ro')
 
 
 
@@ -88,14 +90,29 @@ def showInstallation3d(ax, itcs, nwLoc, swLoc):
     showTcsCables(ax, itsc.tsc)
 
 
-def showInstallation2d(ax, itcs, nwLoc, swLoc):
+def showInstallation2d(ax, itcs, nwLoc, swLoc, showPlat=False):
     x, y, z = itcs.terrain.surfaceMesh(nwLoc, swLoc)
-    ax.contour(x, y, z, 20, cmap=cm.coolwarm)
-    x, y, z = itcs.terrain.wsBoundary(18)
+    con = ax.contour(x, y, z, 20, cmap=cm.coolwarm)
+    cb = plt.colorbar(con, shrink=0.6, extend='both')
+    cb.set_label('Elevation [m]')
 
-    ax.plot(x, y, 'k')
+    def show(fn, ind, form):
+        x, y, xc, yc = fn(ind)
+        ax.plot(x, y, 'k')
+        ax.text(xc, yc, form.format(ind), horizontalalignment='center', verticalalignment='center')
 
-    showTcsCables2d(ax, itcs.tcs)
+
+    show(itcs.terrain.wsMapCoords, 18, 'WS{}')
+
+    for gp in [118, 218, 318]:
+        show(itcs.terrain.gpMapCoords, gp, '{}')
+
+
+    ax.set_xlabel('metres east of local reference')
+    ax.set_ylabel('metres north of local reference')
+
+    showTcsCables2d(ax, itcs.tcs, showPlat)
+
 
 
 def mast(ax, x, y, zb, zt):

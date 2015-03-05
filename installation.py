@@ -12,7 +12,7 @@ class InstalledTCS:
         self.mastX = [xyPos[i][0] for i in range(3)]
         self.mastY = [xyPos[i][1] for i in range(3)]
 
-        self.mastBaseZ = self.terrain.surface(xyPos)
+        self.mastBaseZ = self.terrain.groundSurface(xyPos)
         self.mastTopZ = self.mastBaseZ + height
         anchorPos = np.zeros((3, 3))
         anchorPos[:, 0:2] = xyPos
@@ -22,7 +22,7 @@ class InstalledTCS:
 
 
     def positionPlatform(self, xyPos, height, weight):
-        z = self.terrain.surface(xyPos) + height
+        z = self.terrain.groundSurface(xyPos) + height
         pb = [xyPos[0], xyPos[1], z]
         self.tcs.setLoad(pb, weight)
         return self.tcs.tune()
@@ -32,6 +32,7 @@ class InstalledTCS:
 
         d = range(3)
         zc = range(3)
+        zt = range(3)
         zg = range(3)
         minClear = range(3)
 
@@ -47,17 +48,18 @@ class InstalledTCS:
 
             # print loc
 
-            zg[i] = self.terrain.surface(loc)
+            zt[i] = self.terrain.canopySurface(loc)
+            zg[i] = self.terrain.groundSurface(loc)
 
-            minClear[i] = min(zc[i] - zg[i])
+            minClear[i] = min(zc[i] - zt[i])
 
-        return d, zc, zg, min(minClear)
+        return d, zc, zt, zg, min(minClear)
 
 
 
     def platformMap(self, cableRes, gridRes, heightRes, minClearance, maxTension, weight):
 
-        def prog(ch):
+        def progress(ch):
             import sys
             sys.stdout.write(ch)
             sys.stdout.flush()
@@ -80,27 +82,40 @@ class InstalledTCS:
         zCeil = np.ones((yr.size, xr.size)) * np.NaN
         zGround = np.ones((yr.size, xr.size)) * np.NaN
 
-        for yi in range(len(yr)):
+        progress('This could take a while\n\n')
+        progress('\n{:5} '.format(''))
+        for x in xr[6:-1:6]:
+            progress('{:>6}'.format(int(x)))
+        progress('\n{:5} '.format(''))
+        for x in xr[6:-1:6]:
+            progress('{:>6}'.format('v'))
+        progress('\n')
+
+        for yi in reversed(range(len(yr))):
             y = yr[yi]
-            prog('>')
+            progress('{:5}>'.format(int(y)))
             for xi in range(len(xr)):
                 x = xr[xi]
                 p = (x,y)
 
                 if not bounds.contains_point(p):
-                    prog('.')
-
+                    progress('.')
                     continue
 
+                if any([(self.tcs.p[i][0] == x) and (self.tcs.p[i][1] == y) for i in range(3)]):
+                    progress('#')
+                    continue
+
+
                 ceiling = self.tcs.ceiling(p)
-                floor = self.terrain.surface(p)
+                floor = self.terrain.canopySurface(p)
 
                 dist = ceiling - floor
 
                 if dist < 0:
-                    prog('x')
-
+                    progress('x')
                     continue
+
                 step = dist * 0.5
                 z = floor + step
 
@@ -110,7 +125,7 @@ class InstalledTCS:
                     self.tcs.setLoad(p3, weight)
 
                     if not self.tcs.tune():
-                        raise RuntimeError('ceiling error')
+                        raise RuntimeError('ceiling error', ceiling, floor, p3)
                     ten = max(self.tcs.tensionAtMasts())
                     if ten > maxTension:
                         z -= step
@@ -123,7 +138,7 @@ class InstalledTCS:
                     raise RuntimeError('ceiling error')
                 d, zc, zg, mc = self.getCableClearance(resolution=cableRes)
                 if mc < minClearance:
-                    prog('_') # print '_', # mc < minClearance'
+                    progress('_') # print '_', # mc < minClearance'
                     continue
 
                 zCeil[yi,xi] = lastGoodZ
@@ -150,10 +165,10 @@ class InstalledTCS:
                         ten = max(self.tcs.tensionAtMasts())
                         z -= step;
 
-                prog(chr(0x40 + int(z / 20) % 26))
+                progress(chr(0x40 + int(z / 20) % 26))
                 floorTen[yi,xi] = ten
                 zFloor[yi,xi] = lastGoodZ
-            prog('<\n')
+            progress('<\n')
 
 
         return xr, yr, zCeil, zFloor, zGround, floorTen

@@ -162,7 +162,7 @@ ts = lb2n(4000) # N
 
 # The system is suited to cove locations with steep sides. 
 # 
-# As an exercise, we shall specify a system to provide coverage of most of watershed 18, which contains 3 high value plots.
+# As an exercise, we shall specify a system to provide coverage of some of watershed 18, which contains 3 high value plots.
 
 # <codecell>
 
@@ -234,14 +234,14 @@ from matplotlib import cm
 
 cow = coweeta.Coweeta()
 cow.loadWatersheds()
-cow.setWorkingRefPoint((275000, 3880000))
+cow.setWorkingRefPoint((277000, 3880000))
 
 # <codecell>
 
 
 def myPlot(elev, azim):
     ax = pres.new3d()
-    x, y, z = cow.surfaceMesh([2000,500], [3500,1500])
+    x, y, z = cow.surfaceMesh([0,500], [1500,1500])
     ax.contour(x, y, z, 20, cmap=cm.coolwarm)
 
     ax.plot_surface(x, y, z, rstride=20, cstride=20, alpha=0.3, linewidth=0)
@@ -261,69 +261,79 @@ interact(myPlot, azim=(0, 180), elev=(0, 90))
 
 # <codecell>
 
-ax.elev, ax.azim, ax.dist
-ax.view_init(elev=elev, azim=azim)
-
-# <codecell>
-
 import installation as inst
 from IPython.display import display, HTML
 
 # <codecell>
 
-reload(inst)
+reload(coweeta)
 reload(pres)
+reload(inst)
 reload(cs)
-itcs = inst.InstalledTCS(cow)
-p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
-itcs.positionMasts([p1,p2,p3],[10,10,20])
-itcs.positionPlatform([3000, 1100], 50, 200)
 
-def tableRow(title, form, vals):
-    return '<tr><th>' + title + '</th>' + ' '.join([('<td>' + form + '</td>').format(x) for x in vals]) + '</tr>\n'
+from matplotlib import cm
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.loadGradientPlots()
+cow.setWorkingRefPoint((277000, 3880000))
+
+gridRes = 10
+
+
+
+
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
+itcs.positionMasts([p1,p2,p3],[40, 40, 50])
+itcs.positionPlatform([3000, 1100], 50, 200)
 
 
 def posPlatform(x, y, height, weight):
+    def tableRow(title, form, vals):
+        return '<tr><th>' + title + '</th>' + ' '.join([('<td>' + form + '</td>').format(x) for x in vals]) + '</tr>\n'
+
     okay = itcs.positionPlatform([x, y], height, weight)
     if not okay:
         print 'One or more cables would need to be in compression to position the platform {}m above ({},{})'.format(height,x,y)
         return
 
-    d, zc, zg, mc = itcs.getCableClearance(resolution=10)
+    d, zc, zt, zg, mc = itcs.getCableClearance(resolution=10)
     
     if mc < 1.0:
         attr = ' style="color:red;"'
     else:
         attr = ''
-
+    
     s = '<table>\n'
     s += tableRow('Cable', '{}', range(1, 4))
     s += tableRow('Length [m]', '{:0.0f}', [itcs.tcs.c[i].length() for i in range(3)])
     s += tableRow('Tension [N]', '{:0.0f}', itcs.tcs.tensionAtMasts())
     s += '</table>\n'
-    s += '<p{}>Minimum clearance: {:0.2f}m</p>\n'.format(attr, mc)
+    s += '<p{}>Minimum canopy clearance: {:0.2f}m</p>\n'.format(attr, mc)
 
     display(HTML(s))
     
-    plt.figure(figsize=(16,12))
+    plt.figure(figsize=(12,8))
 
+    
+    ax = plt.subplot(111, aspect='equal')
+    pres.showInstallation2d(ax, itcs, [0,500], [1500,1500], showPlat=True)
+ 
+    plt.figure(figsize=(12,8))
     axt = range(3)
     axb = range(3)
-    
-    ax = plt.subplot(331)
-    pres.showInstallation2d(ax, itcs, [2000,500], [3500,1500])
- 
     # fig, axes = plt.subplots(ncols=3, nrows=2, sharex=True, sharey=True)
     # plt.setp(axes.flat, aspect=1.0, adjustable='box')
 
    
-    axt[0] = plt.subplot(334) # , aspect='equal')
-    axt[1] = plt.subplot(335, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
-    axt[2] = plt.subplot(336, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
+    axt[0] = plt.subplot(231, aspect='equal')
+    axt[1] = plt.subplot(232, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
+    axt[2] = plt.subplot(233, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
 
-    axb[0] = plt.subplot(337, sharex=axt[0])
-    axb[1] = plt.subplot(338, sharex=axt[0], sharey=axb[0])
-    axb[2] = plt.subplot(339, sharex=axt[0], sharey=axb[0])
+    axb[0] = plt.subplot(234, sharex=axt[0])
+    axb[1] = plt.subplot(235, sharex=axt[0], sharey=axb[0])
+    axb[2] = plt.subplot(236, sharex=axt[0], sharey=axb[0])
 
     plt.setp(axt[1].get_yticklabels(), visible=False)
     plt.setp(axt[2].get_yticklabels(), visible=False)
@@ -332,14 +342,15 @@ def posPlatform(x, y, height, weight):
     
     
     axt[0].set_ylabel('elevation [m]')
-    axb[0].set_ylabel('clearance [m]')
+    axb[0].set_ylabel('clearance from canopy [m]')
     for i in range(3):
 
         plt.setp(axt[i].get_xticklabels(), visible=False)
         axt[i].plot(d[i], zc[i], 'b-')
+        axt[i].plot(d[i], zt[i], 'g-')
         axt[i].plot(d[i], zg[i], 'g-')
         axt[i].plot(d[i][-1], zc[i][-1], 'ro')
-        axt[i].plot([0, 0], [zc[i][0], zg[i][0]], 'r-')
+        axt[i].plot([0, 5], [zc[i][0], zg[i][0]], 'r-')
         
         axb[i].set_xlabel('distance from mast {} [m]'.format(i+1))
 
@@ -347,12 +358,50 @@ def posPlatform(x, y, height, weight):
 
     
 
+# <markdowncell>
+
+# # Exercising System
+# 
+# The following is a interactive model of the WS18 TCS.  The position of the platform can be adjusted in all three axes.  The weight can also be controlled.
+
 # <codecell>
 
 from IPython.html.widgets import interact
 # p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
 
-interact(posPlatform, x=(2332,3175), y=(790,1280), height=(0, 200), weight=(0, 400))
+interact(posPlatform, x=(332,1175), y=(790,1280), height=(0, 200), weight=(0, 1000))
+
+# <markdowncell>
+
+# ##Observations
+# 
+# * Increasing the payload mass doesn't result in a proportional increase in tension.  This is because there is less cable droop and the platform can be placed lower.
+# 
+# * The amount the masts extend beyond the canopy is determined largely by the trees near them.  We rely cheifly on topology for clearance away from the  masts. 
+# 
+# * We can potentially can operate with cable tensions below 2kN or 400lb; well within the tensile strength of the cable used (17kN)
+# 
+# * With a substantial platform load, the droop of the cables only becomes significant when the platform is positioned close to the line between two masts; requiring the cable to the third mast to not pull too much.  This lower tension means that it droops.  Ground clearance dictates the minimum tension. 
+
+# <markdowncell>
+
+# ##Cable Return Limitations
+# 
+# If we opt to have all winches located at the one mast then the cables must be run back from the other two masts.  This introduces an extra constraint - there would be a minimum tension acheivable on these cables imposed by the terrain between the pulley masts and the winch mast. 
+
+# <markdowncell>
+
+# # Mapping System Over Range
+# 
+# Let's automate the above process of positioning the platform at a map reference and finding the z range.  The following generates a grid of (x,y) positions and for each one:
+# * determines the maximum elevation attainable by the platform (controlled by maximum cable tension only)
+# * determines the minimum elevation attainable by the platform (controlled by cable clearance above canopy)
+# * determines the maximum tension in all three cables to hold this minimum elevation
+# * determines the canopy and ground height at each of these grid references
+# 
+# Locations outside the triangle made by the masts are ignored and set to NaN.  Locations where sufficient cable clearance can't be attained with the tension constrains are set to NaN.
+# 
+# This computation is slow as there are multiple iterations per location.  Each iteration involves solving tension equations with numerical methods.
 
 # <codecell>
 
@@ -363,7 +412,9 @@ reload(cs)
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
 itcs.positionMasts([p1,p2,p3],[10,10,20])
-xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=1500, weight=200)
+xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
+   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=1500, weight=200
+)
 
 # <codecell>
 
@@ -372,12 +423,18 @@ xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(cableRes=5, gridRes=
 gridRes = 10
 colHigh = zCeil - zGround
 valid = np.isfinite(colHigh)
+area = np.count_nonzero(valid) * gridRes ** 2
 volume = np.sum(colHigh[valid]) * gridRes ** 2
-HTML('Accessible airspace volume = {:,}$m^3$'.format(int(volume)))
+s = '''<table>
+<tr><th>Accessible ground area</th><td>{:,} $m^2$</td></tr>
+<tr><th>Accessible airspace volume</th><td>{:,} $m^3$</td></tr>
+'''.format(int(area), int(volume))
+HTML(s)
 
 # <codecell>
 
-xws18, yws18, zws18 = itcs.terrain.wsBoundary(18)
+reload(pres)
+
 
 def tcsMap(title, arg):
     plt.figure(figsize=(14,10))
@@ -385,18 +442,13 @@ def tcsMap(title, arg):
     plt.jet()
 
     ax = plt.subplot(111, aspect='equal')
+    pres.showInstallation2d(ax, itcs, [200,700], [1300,1500])
+    
     cs = plt.contourf(xr, yr, arg)
-    #ax.clabel(cs, inline=1, fontsize=10)
     ax.set_title(title)
-    ax.plot(xws18, yws18, 'k')
 
-    # xr, yr, zceil
-    plt.colorbar()
+    plt.colorbar(cs, shrink=0.6)
 
-
-    for i in range(3):
-        ax.plot([itcs.tcs.p[i][0]], [itcs.tcs.p[i][1]], 'ro')
-        ax.text(itcs.tcs.p[i][0], itcs.tcs.p[i][1], 'mast {}'.format(i+1))
 
 # <codecell>
 
@@ -407,6 +459,180 @@ tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
 tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
 tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
 
+
+# <codecell>
+
+import cableStatics as cs
+reload(inst)
+reload(pres)
+reload(cs)
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
+itcs.positionMasts([p1,p2,p3],[10,10,20])
+xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
+   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=2000, weight=500
+)
+
+# <codecell>
+
+xws18, yws18, zws18 = itcs.terrain.wsBoundary(18)
+tcsMap('Maximum Elevation of Platform [m]', zCeil)
+tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
+tcsMap('Height Range of Platform [m]', zCeil - zFloor)
+tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
+tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
+
+# <codecell>
+
+reload(coweeta)
+reload(pres)
+reload(cs)
+from matplotlib import cm
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.loadGradientPlots()
+cow.setWorkingRefPoint((277000, 3880000))
+
+
+reload(inst)
+reload(pres)
+reload(cs)
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
+itcs.positionMasts([p1,p2,p3],[10,10,20])
+
+plt.figure(figsize=(14,10))
+
+plt.jet()
+
+ax = plt.subplot(111, aspect='equal')
+pres.showInstallation2d(ax, itcs, [200,700], [1300,1500])
+
+
+# <codecell>
+
+
+plt.figure(figsize=(14,10))
+
+plt.jet()
+
+ax = plt.subplot(111, aspect='equal')
+nwLoc = [200,700]
+swLoc = [1300,1500]
+x, y, z = itcs.terrain.surfaceMesh(nwLoc, swLoc)
+con = ax.contour(x, y, z, 20, cmap=cm.coolwarm)
+cb = plt.colorbar(con, shrink=0.6, extend='both')
+cb.set_label('Elevation [m]')
+x, y, z = itcs.terrain.wsBoundary(18)
+ax.plot(x, y, 'k')
+
+x, y, z = itcs.terrain.gpBoundary(118)
+ax.plot(x, y, 'k')
+
+x, y, z = itcs.terrain.gpBoundary(218)
+ax.plot(x, y, 'k')
+
+x, y, z = itcs.terrain.gpBoundary(318)
+ax.plot(x, y, 'k')
+
+
+ax.set_xlabel('metres east of local reference')
+ax.set_ylabel('metres north of local reference')
+
+ax.grid()
+
+pres.showTcsCables2d(ax, itcs.tcs, showPlat=False)
+
+# <codecell>
+
+import cableStatics as cs
+reload(inst)
+reload(pres)
+reload(cs)
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([370, 1290], [1175, 1240], [1040, 790])
+itcs.positionMasts([p1,p2,p3],[10,10,20])
+xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
+   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=2000, weight=500
+)
+
+# <codecell>
+
+def tcsMap(title, arg):
+    plt.figure(figsize=(14,10))
+    
+
+    ax = plt.subplot(111, aspect='equal')
+    pres.showInstallation2d(ax, itcs, [200,700], [1300,1500])
+    
+    cs = plt.contourf(xr, yr, arg)
+    
+    ax.set_title(title)
+
+    cb = plt.colorbar(cs, shrink=0.6)
+    cb.set_label(title)
+
+def tcsMapAll():
+
+    colHigh = zCeil - zGround
+    valid = np.isfinite(colHigh)
+    area = np.count_nonzero(valid) * gridRes ** 2
+    volume = np.sum(colHigh[valid]) * gridRes ** 2
+    s = '''<table>
+    <tr><th>Accessible ground area</th><td>{:,} $m^2$</td></tr>
+    <tr><th>Accessible airspace volume</th><td>{:,} $m^3$</td></tr>
+    '''.format(int(area), int(volume))
+    HTML(s)    
+    
+    tcsMap('Maximum Elevation of Platform [m]', zCeil)
+    tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
+    tcsMap('Height Range of Platform [m]', zCeil - zFloor)
+    tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
+    tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
+    tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
+
+    
+
+# <codecell>
+
+tcsMapAll()
+
+# <codecell>
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.loadGradientPlots()
+cow.setWorkingRefPoint((277000, 3880000))
+
+gridRes = 10
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([370, 1290], [1175, 1240], [1040, 790])
+itcs.positionMasts([p1,p2,p3],[40,40,50])
+xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
+   cableRes=5, gridRes=gridRes, heightRes=0.5, minClearance=2, maxTension=2000, weight=200
+)
+
+tcsMapAll()
+
+# <markdowncell>
+
+# ##Further Observations
+# 
+# Increasing the load from 200N to 500N (40lb to 100lb) resulted in an increase of only 50% in cable tension.  It also lowers the minimum operating envelope by a number of metres over much of the range.
+
+# <markdowncell>
+
+# #Engineering Challenges
+# 
+# ## Initial Threading Of The Cables
+# Care is taken to keep the mast-platform cables above the canopy.  How should the cable be installed in the first place?  
+# * Nylon fishing line with helium filled balloons attached at regular intervals to render it neutrally buoyant.  
+# * Use a quadrotor to drag the nylon line from one mask to another
+# * 
+# This would need to occur on a windless, sunless day.
+# 
 
 # <headingcell level=2>
 
@@ -425,4 +651,18 @@ tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
 # Underslung raft system http://www.lindstrandtech.com/aerostat-main/airships/thermal-airships/
 # 
 # http://www.cleyet-marrel.com/site/Arboglisseur-Presentation.41c72.html?lang=en
+# 
+# ##Issues
+# * housing when not in use
+# * replacing escaped helium
+# * navigating close to canopy
+# * retrieval if crashed
+# * reacting to looming wind
+# * small payload
+# * short mission length unless gas engines are used
+# * can one be designed to land on canopy?
+# * how would it be anchored?
+
+# <codecell>
+
 

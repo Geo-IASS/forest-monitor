@@ -27,6 +27,8 @@ class Coweeta:
         self.step = np.array([self.gt[1], self.gt[5]])
         self.origin = np.array([self.gt[0], self.gt[3]])
 
+        self.zCanopy = self.zg0 + 30  #TEMP!!! assume all trees are 30m high
+
 
     def setWorkingRefPoint(self, loc):
         # Set a local reference point.
@@ -63,13 +65,22 @@ class Coweeta:
         return self.origin, self.origin + self.step * self.zg.shape
 
 
-    def surface(self, loc):
+    def groundSurface(self, loc):
         # Returns the z coordinate on the ground surface at loc
         locI = self.locationToIndices(loc)
         if locI.shape == (2,):
             z = scipy.ndimage.map_coordinates(self.zg0, locI.reshape(2,1))
         else:
             z = scipy.ndimage.map_coordinates(self.zg0, locI.transpose())
+        return z
+
+    def canopySurface(self, loc):
+        # Returns the z coordinate on the ground surface at loc
+        locI = self.locationToIndices(loc)
+        if locI.shape == (2,):
+            z = scipy.ndimage.map_coordinates(self.zCanopy, locI.reshape(2,1))
+        else:
+            z = scipy.ndimage.map_coordinates(self.zCanopy, locI.transpose())
         return z
 
 
@@ -100,7 +111,6 @@ class Coweeta:
             feat = layer.GetFeature(i)
 
             wsNum = feat.GetField(0)
-            area = feat.GetField(1)/10000
             geoRef = feat.GetGeometryRef()
 
             geom = geoRef.ExportToJson()
@@ -109,13 +119,52 @@ class Coweeta:
             self.watershed[wsNum] = np.array(coords)
 
 
+    def loadGradientPlots(self):
+        self.gradientPlot = dict()
+        plots = oo.Open('gradientPlots/Terrestrial_Gradient_80x80m_Plot.dbf')
+        layer = plots.GetLayerByIndex(0)
+        numFeat = layer.GetFeatureCount()
+
+        indices = [118, 218, 318, 427, 527]
+        jd = json.JSONDecoder()
+        for i in range(numFeat):
+
+            feat = layer.GetFeature(i)
+
+            geoRef = feat.GetGeometryRef()
+
+            geom = geoRef.ExportToJson()
+            struct = jd.decode(geom)
+            coords = struct['coordinates'][0]
+            self.gradientPlot[indices[i]] = np.array(coords)
+
     def wsBoundary(self, wsNum):
         points = self.watershed[wsNum] - self.refPoint
         x = points[:,0]
         y = points[:,1]
-        z = self.surface(points)
+        z = self.groundSurface(points)
         return x, y, z
 
+    def gpBoundary(self, gsNum):
+        points = self.gradientPlot[gsNum] - self.refPoint
+        x = points[:,0]
+        y = points[:,1]
+        z = self.groundSurface(points)
+        return x, y, z
 
+    def gpMapCoords(self, gsNum):
+        points = self.gradientPlot[gsNum] - self.refPoint
+        x = points[:,0]
+        y = points[:,1]
+        xc = (min(x) + max(x)) / 2
+        yc = (min(y) + max(y)) / 2
+        return x, y, xc, yc
 
+    def wsMapCoords(self, wsNum):
+        points = self.watershed[wsNum] - self.refPoint
+        x = points[:,0]
+        y = points[:,1]
+        xc = (min(x) + max(x)) / 2
+        yc = (min(y) + 2 * max(y)) / 3
+        return x, y, xc, yc
 
