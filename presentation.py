@@ -30,7 +30,7 @@ def showExampleSystem3d():
         raise RuntimeError('Not all cables in tension')
 
     # Display
-    ax = cs.new3d()
+    ax = new3d()
 
     tree(ax, 100, 200, 0, 4)
     tree(ax, 80, 150, 0, 3)
@@ -41,8 +41,8 @@ def showExampleSystem3d():
     mast(ax, 0, 200, 0, 10)
     mast(ax, 150, 100, 0, 10)
 
-    showTcsCables(ax, tcs)
-    cs.report(tcs, 3, ax)
+    showTcsCables3d(ax, tcs)
+    #TEMP!!! cs.report(tcs, 3, ax)
 
     ax.plot([tcs.pb[0], tcs.pb[0]], [tcs.pb[1], tcs.pb[1]], [tcs.pb[2], tcs.pb[2]-3], 'b')
     ax.plot([tcs.pb[0], tcs.pb[0]], [tcs.pb[1], tcs.pb[1]], [tcs.pb[2], tcs.pb[2]-3], 'ro')
@@ -50,11 +50,24 @@ def showExampleSystem3d():
     ax.set_title('Example Canopy Cable Suspended Robot')
 
 
+def showCable(cable, ax=None):
+    doAll = not(ax)
+    if doAll:
+        ax = plt.subplot(111)
+        ax.set_title('Suspended Cable')
+    x = np.linspace(0, cable.w, 50)
+    z = cable.cableZ(x)
+    ax.plot([0, cable.w], [cable.z1, cable.z2], 'ro')
+    ax.plot(x,z,'b-')
+    if doAll:
+        plt.show()
+
+
 def showTcsCables3d(ax, tcs):
 
     for i in range(3):
-        x = np.linspace(tcs.pb[0], tcs.p[i][0], 50)
-        y = np.linspace(tcs.pb[1], tcs.p[i][1], 50)
+        x = np.linspace(tcs.p[i][0], tcs.pb[0], 50)
+        y = np.linspace(tcs.p[i][1], tcs.pb[1], 50)
         d = np.linspace(0, tcs.c[i].w, 50)
         z = tcs.c[i].cableZ(d)
         ax.plot([tcs.pb[0], tcs.p[i][0]], [tcs.pb[1], tcs.p[i][1]], [0, 0], 'g')

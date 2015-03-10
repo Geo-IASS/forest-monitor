@@ -69,7 +69,7 @@ class Coweeta:
         # Returns the z coordinate on the ground surface at loc
         locI = self.locationToIndices(loc)
         if locI.shape == (2,):
-            z = scipy.ndimage.map_coordinates(self.zg0, locI.reshape(2,1))
+            z = scipy.ndimage.map_coordinates(self.zg0, locI.reshape(2,1))[0]
         else:
             z = scipy.ndimage.map_coordinates(self.zg0, locI.transpose())
         return z
@@ -78,7 +78,7 @@ class Coweeta:
         # Returns the z coordinate on the ground surface at loc
         locI = self.locationToIndices(loc)
         if locI.shape == (2,):
-            z = scipy.ndimage.map_coordinates(self.zCanopy, locI.reshape(2,1))
+            z = scipy.ndimage.map_coordinates(self.zCanopy, locI.reshape(2,1))[0]
         else:
             z = scipy.ndimage.map_coordinates(self.zCanopy, locI.transpose())
         return z

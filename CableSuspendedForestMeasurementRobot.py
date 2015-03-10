@@ -19,15 +19,20 @@
 # 
 # This document investigates the feasability of a permanently installed cable-suspended parallel robot that traverses the airspace above the canopy of a selected study site.
 # 
-# The system consists of three masts that project above the canopy on hill slopes above the study site.  From each mast a cable runs to a suspended platform.  That platform can be positioned at any point in the airspace above the canopy by combinations of winching in/playing out cable from the masts.  The platform houses a fourth winch that positions a bob below it.  This bob would house measurement equipment and would decend to the canopy and below.
+# The system consists of three masts that project above the canopy on hill slopes above the study site.  From each mast a cable runs to a suspended platform.  That platform can be positioned at any point in the airspace above the canopy by combinations of winching in/playing out cable from the masts.  The platform houses a fourth winch that positions a second mobile unit, the bob, below it.  This bob would house measurement equipment and would decend to the canopy and below.
 # 
 # The lack of obstacles above the canopy permits automated positioning of the platform, and therefore routine automated measurement.  
 
 # <codecell>
 
+%load_ext autoreload
+%autoreload 2
+%matplotlib inline
+
+# <codecell>
+
 import presentation as pres
-reload(pres)
-pres.showExampleSystem()
+pres.showExampleSystem3d()
 
 # <markdowncell>
 
@@ -77,7 +82,7 @@ import cableStatics as cs
 
 c = cs.Cable(5, 4, 10, 0.035)
 c.setHorizForce(1)
-cs.showCable(c)
+pres.showCable(c)
 
 # <markdowncell>
 
@@ -118,24 +123,19 @@ def lb2n(lb):
 # 1/4" KRYPTON-K 
 cw = lb2n(2.4)/ft2m(100.0) # kg/m
 ts = lb2n(4000) # N 
-"cable weight: {:05f}N/m; tensile strength: {:05f}N".format(cw, ts)
-
-# <headingcell level=2>
-
-# Nomenclature
+"cable weight: {:0.3f}N/m; tensile strength: {:0.3f}kN".format(cw, ts/1000)
 
 # <markdowncell>
 
-# bob/plummet/descender
+# #The Bob
 # 
-# platform/nexus/
-
-# <headingcell level=2>
-
-# Bob Design
+# In a given installation the platform suspended between the masts may not be able to be lowered to the canopy in some or most of the operating range.  This is because of the droop of the cables under their own weight can cause them to be closer to the canopy than the platform - particularly on steep slopes.  The solution is to employ a second mobile unit, the bob which hangs vertically from the platform.
+# 
 
 # <markdowncell>
 
+# ##Bob Design
+# 
 # The design of the cable robot is simplified by the absence of snags.  Tensioning of the cables would keep the platform and all cables at a safe distance above the highest trees to avoid snagging.  If the system is to employ a bob the descends into the canopy and below then care will have to be paid to minimising and managing snags.  
 # 
 # * Use imaging/lidar to identify clear descent columns
@@ -153,6 +153,25 @@ ts = lb2n(4000) # N
 # * allow the bob to rotate freely but record the orientation to allow correction post measurement.
 # 
 # The design of the bob involves a number of technical risks.
+
+# <markdowncell>
+
+# #Cable Winching
+# 
+# The cables are under significant tension which has an impact on how we manipulate them.  Energy expended moving an object distance $d$ against a force $f$ is the product of the two, i.e. $e = f \dot d$.   To reel in by 1m a cable under 1kN of tension will require 1kJ.  To do this in 1s will require a 1kW rated motor.  At the same time this winch is working the other winches would be reeling out cable under tension.  The energy 'stored'is these cables is either dumped in the winch motors or, ideally, harvested for distribution to the other winches or stored locally for this winch's later use.
+# 
+# Distribution of the energy electrically would require cabling rated to 1kW.  110V, 9A.  This would need to be mounted on power poles and routed to a common point.  
+# 
+# Mechanical distrubution of the energy would be achived by running two of the cables to their respective masts and then back to the third mast.  All three winches would be located at this third mast.  The two non-winch masts would simply have pulley assemblies that let the cable run unencumbered.  They might have monitoring equipment such as odometers or cameras but these items could be powered by photovoltaics and batteries.  There are several disadvantages to this arrangement.  First, the vertical load on the unpowered masts is effectively doubled, as whatever tension is present on the section of cable running to the platform will exist on the return cable which will potentially pulling in much the same direction.  The winch mast has around three times the tension of a single cable.  
+# 
+# The use of return lines introduces an extra constraint on operation - there would be a minimum tension acheivable on these cables imposed by the terrain between the pulley masts and the winch mast. 
+# 
+# These are significant design issues yet returning all cables to the one mast has one significant advantage.
+# 
+# ##Mechanical Energy Harvesting Winch Assembly
+# 
+# If the three cables are all returned to the same winch assembly then the transfer of energy from one cable to the others can be performed purely mechanically; allowing the electric motors to be reduced in power capacity.  
+# In theory, a possible arrangement is the three winches interconnected by three differential gear assemblies, an electric motor driving each differential.
 
 # <headingcell level=2>
 
@@ -227,9 +246,6 @@ for i in range(numFeat):
 
 # <codecell>
 
-reload(coweeta)
-reload(pres)
-reload(cs)
 from matplotlib import cm
 
 cow = coweeta.Coweeta()
@@ -266,11 +282,6 @@ from IPython.display import display, HTML
 
 # <codecell>
 
-reload(coweeta)
-reload(pres)
-reload(inst)
-reload(cs)
-
 from matplotlib import cm
 
 cow = coweeta.Coweeta()
@@ -298,7 +309,8 @@ def posPlatform(x, y, height, weight):
         print 'One or more cables would need to be in compression to position the platform {}m above ({},{})'.format(height,x,y)
         return
 
-    d, zc, zt, zg, mc = itcs.getCableClearance(resolution=10)
+    d, zt, zg = itcs.getTerrainBeneathCables(resolution=10)
+    zc, mc = itcs.getCableClearance(d, zt)
     
     if mc < 1.0:
         attr = ' style="color:red;"'
@@ -422,15 +434,22 @@ interact(posPlatform, x=(332,1175), y=(790,1280), height=(0, 200), weight=(0, 10
 # <codecell>
 
 import cableStatics as cs
-reload(inst)
-reload(pres)
-reload(cs)
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.loadGradientPlots()
+cow.setWorkingRefPoint((277000, 3880000))
+
+gridRes = 10
 itcs = inst.InstalledTCS(cow)
-p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
-itcs.positionMasts([p1,p2,p3],[10,10,20])
-xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
-   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=1500, weight=200
+p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
+
+itcs.positionMasts([p1,p2,p3],[40,40,50])
+xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen = itcs.platformMap(
+   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=1500, weight=200,
+   showProgress=True
 )
+
 
 # <codecell>
 
@@ -449,11 +468,8 @@ HTML(s)
 
 # <codecell>
 
-reload(pres)
-
-
 def tcsMap(title, arg):
-    plt.figure(figsize=(14,10))
+    plt.figure(figsize=(16,10))
     
     plt.jet()
 
@@ -473,20 +489,20 @@ tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
 tcsMap('Height Range of Platform [m]', zCeil - zFloor)
 tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
 tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
-tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,0])
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,1])
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,2])
 
 
 # <codecell>
 
-import cableStatics as cs
-reload(inst)
-reload(pres)
-reload(cs)
+
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
-itcs.positionMasts([p1,p2,p3],[10,10,20])
-xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
-   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=2000, weight=500
+itcs.positionMasts([p1,p2,p3],[40,40,50])
+xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen = itcs.platformMap(
+   cableRes=5, gridRes=10, heightRes=0.5, minClearance=2, maxTension=2000, weight=500,
+   showProgress=True
 )
 
 # <codecell>
@@ -497,13 +513,12 @@ tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
 tcsMap('Height Range of Platform [m]', zCeil - zFloor)
 tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
 tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
-tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,0])
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,1])
+tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,2])
 
 # <codecell>
 
-reload(coweeta)
-reload(pres)
-reload(cs)
 from matplotlib import cm
 
 cow = coweeta.Coweeta()
@@ -511,10 +526,6 @@ cow.loadWatersheds()
 cow.loadGradientPlots()
 cow.setWorkingRefPoint((277000, 3880000))
 
-
-reload(inst)
-reload(pres)
-reload(cs)
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
 itcs.positionMasts([p1,p2,p3],[10,10,20])
@@ -564,9 +575,7 @@ pres.showTcsCables2d(ax, itcs.tcs, showPlat=False)
 # <codecell>
 
 import cableStatics as cs
-reload(inst)
-reload(pres)
-reload(cs)
+
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([370, 1290], [1175, 1240], [1040, 790])
 itcs.positionMasts([p1,p2,p3],[10,10,20])
@@ -626,8 +635,10 @@ gridRes = 10
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([370, 1290], [1175, 1240], [1040, 790])
 itcs.positionMasts([p1,p2,p3],[40,40,50])
-xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
-   cableRes=5, gridRes=gridRes, heightRes=0.5, minClearance=2, maxTension=2000, weight=200
+xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen = itcs.platformMap(
+   cableRes=5, gridRes=gridRes, heightRes=0.5, minClearance=2, maxTension=2000, weight=200,
+   showProgress=True
+
 )
 
 tcsMapAll()
@@ -698,7 +709,7 @@ tcsMapAll()
 # 
 # ## Vandalism
 # The visibility of the installation will attract the curiousity of forest users and potentially attract vandalism.  The thousands of dollars of kevlar cabling might be stolen.  The masts would need to have anticlimb panels fitted.
-# From a security perspective winch assembly would idealy be located above these panels - so long as this doesn't compromise operator safety during servicing.  
+# From a security perspective winch assembly would idealy be located above these panels - so long as this doesn't compromise operator safety during servicing.  Given this would be a networked device the threat of remote hacking needs to be considered.
 # 
 # 
 # 
@@ -707,6 +718,42 @@ tcsMapAll()
 # 
 # The only ground located component of the system would be the winch assembly.  This might need to be armoured to prevent bear damage.
 # 
+
+# <markdowncell>
+
+# #Electronics and Communications
+# 
+# The platform, bob and each of the masts would house embedded computers, all interconnected via a Wi-Fi network.  Directional antennas may be required. Each would have GPS recievers.  The masts receivers would provide realtime differential GPS capability to the platform and bob.  Each node would have video camera for monitoring.  The masts and platform would have anemometers to monitor local winds.   
+# 
+# Although power and data cabling could be routed to the platform and then to the bob these would dramatically increase the complexity of the system and impact on reliability.  The conductors could conceviably be embedded in the kevlar cable however this would be a custom manufacture, it would impact on the cable mass.  Accessing the terminals from the cable drum would be difficult.  A separate non-loaded cable could be used but this would still pose issues.  System design is far easier if the mobile components each have their own energy store in the form of batteries and rely on radio communications to the masts.  These batteries can be recharged automatically when the units are housed.  The platform battery must be sized to power the bob winch.  The vertical travel of the bob would be greater than the horizontal travel of the platform.  Ideally this battery would not need recharging more than once a day.   
+# 
+# Reliable electrical contact for recharging would need to be investigated.
+# 
+# * Radio link between Coweeta office complex and the powered mast.  This might be microwave if a appropriately priced system is available.  Alternatively an IEEE 802.11 Wi-Fi link could serve if directional antennas are used.  If the powered mast doesn't have line-of-sight to the offices then communications would be relayed through an unpowered mast.  A suitably sized photovoltaic system would be needed.
+# * Radio link between the platform and the powered mast
+# * Radio link between bob and platform
+# * data storage should the uplink be degraded due to atmospheric conditions.
+
+# <markdowncell>
+
+# # Software
+# The system would be built with open source software and all design would in turn be open source.
+# 
+# Besides the work needed for the scientific data gathering effort these are some of the components of software design:
+# 
+# * positioning awareness, GPS, cable spool tracking, machine vision
+# * winch control
+# * path calculation
+# * communication management
+# * human interface/manual override process
+# * system shutdown and housing process (including emergency shutdown due to winds)
+# * control and data security - prevent hacking
+# * power monitoring
+# * software upgrade - try to avoid having people climbing the masts to upgrade software.
+# * bob descent algorithm: checking that there is a clear pathand/or identifying interference
+# * bob direction control
+# * cable elongation monitoring.
+# * data storage and management 
 
 # <markdowncell>
 
@@ -722,13 +769,8 @@ tcsMapAll()
 # The three cables all terminate at a series of interconnected winches located on one of the masts.  This is powered by three electrical motors and each winch would have an electronic brake that can withstand forces imparted by worst case wind events.  The design and manufacture of such an assembly is outside my competency.
 # 
 # ### Electronics and Communications
-# Weight and energy storage are not limiting factors freeing us to use off-the-shelf system components for much of the control system.  Components
+# Weight and energy storage are not limiting factors freeing us to use off-the-shelf system components for much of the control system.  The rechargable batteries on the mobile components will need periodic replacement.
 # 
-# The platform, bob and each of the masts would house embedded computers, all interconnected via a Wi-Fi network.  Directional antennas may be required. Each would have GPS recievers.  The masts receivers would provide realtime differential GPS capability to the platform and bob.  Each node would have video camera for monitoring.  The masks would have anemometers to monitor local winds.   
-# * Radio link between Coweeta office complex and the powered mast.  This might be microwave if a appropriately priced system is available.  Alternatively an IEEE 802.11 Wi-Fi link could serve if directional antennas are used.  If the powered mast doesn't have line-of-sight to the offices then communications would be relayed through an unpowered mast.  A suitably sized photovoltaic system would be needed.
-# * Radio link between the platform and the powered mast
-# * Radio link between bob and platform
-# * data storage 
 # 
 # ### Cable Purchase and Replacement
 # The system exposes long lengths of kelvar cable to the elements.  The BOM cost of this cable is around $1 per metre.  The polyester mantle is UV stabilized but will ultimately degrade.  The cable would need to be replaced long before the kevlar core becomes compromised.
@@ -757,6 +799,27 @@ tcsMapAll()
 # ## Wind Loading
 # 
 # ## Software
+# 
+# 
+
+# <markdowncell>
+
+# # Measurements Enabled by the System
+# * temperature and windspeed measurements without air column disturbance
+# * atmospheric composition measurements ($CO_2$, $H_2O$)
+# * LiDAR from above and below canopy
+# * photographic LAI
+# * forest floor photography and data extraction through postprocessing image processing and machine vision  This might be used to suppliment manual characterisation of gradient plots.
+# * leaf and branch collection for sampling
+# * in situ LiCOR leaf measurement 
+# * permanent positioning of instrumentation in canopy such as lysemeters and insect traps.
+# * Remote visual inspection of experiments in the field.
+# * autonomous resupply of experiments in the field such as replacement batteries.  This would introduce design challenges.
+# 
+# 
+# # Additional Utility
+# * Provide a communications network for other instrumentation in the field
+# * masts can be used for other experiments.
 # 
 # 
 

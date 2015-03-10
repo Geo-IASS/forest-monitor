@@ -148,6 +148,12 @@ class TriCableSystem:
 
 
 
+    def adjustPlatformElevation(self, el):
+        self.pb[2] = el
+        self.dirVec = [dirVec(self.pb, self.p[i]) for i in range(3)]
+
+
+
     def tensionAtMasts(self):
         return [self.c[i].tension(0) for i in range(3)]
 
