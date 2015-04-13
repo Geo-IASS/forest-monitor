@@ -77,11 +77,12 @@ pres.showExampleSystem3d()
 import numpy as np
 import matplotlib.pyplot as plt
 import cableStatics as cs
+import coweeta
 
 # <codecell>
 
-c = cs.Cable(5, 4, 10, 0.035)
-c.setHorizForce(1)
+c = cs.Cable(z1=5, z2=4, w=10,  0.035)
+c.setHorizForce(1)  # newtons
 pres.showCable(c)
 
 # <markdowncell>
@@ -185,61 +186,7 @@ ts = lb2n(4000) # N
 
 # <codecell>
 
-import coweeta
-import osgeo.ogr as oo
-sws = oo.Open('coweeta_subwatersheds/coweeta_subwatersheds.dbf')
-l = sws.GetLayerByIndex(0)
-numFeat = l.GetFeatureCount()
-# print('numFeat', numFeat)
-#f = l.GetFeature(0)
-#gr = f.GetGeometryRef()
-# print('feat', f)
-
-plt.figure(figsize=(14,10))
-ax = plt.subplot(111)
-
-import json
-jd = json.JSONDecoder()
-for i in range(numFeat):
-    
-    f = l.GetFeature(i)
-    
-    ws = f.GetField(0)
-    area = f.GetField(1)/10000
-    # print i, , f.GetField(1), f.GetField(2), f.GetField(3)
-    gr = f.GetGeometryRef()
-    # print gr
-    geom = gr.ExportToJson()
-
-
-    struct = jd.decode(geom)
-    
-    coords = struct['coordinates'][0]
-
-    x, y = [[ss[i] for ss in coords] for i in [0,1]]
-    
-    xc = (min(x) + max(x)) / 2
-    yc = (min(y) + max(y)) / 2
-    
-    ax.plot(x, y, 'r')
-    ax.text(xc, yc, 'WS{}\n{}ha'.format(ws, int(area)), horizontalalignment='center', verticalalignment='center')
-    
-
-s = oo.Open('coweeta_streams/coweeta_streams.dbf')
-l = s.GetLayerByIndex(0)
-numFeat = l.GetFeatureCount()
-
-for i in range(numFeat):
-    f = l.GetFeature(i)
-    gr = f.GetGeometryRef()
-    p = np.array(gr.GetPoints())
-
-    x = p[:,0]
-    y = p[:,1]
-
-    ax.plot(x, y,'b')
-
-    
+pres.coweetaMap()
 
 # <codecell>
 
@@ -250,6 +197,7 @@ from matplotlib import cm
 
 cow = coweeta.Coweeta()
 cow.loadWatersheds()
+cow.loadGradientPlots()
 cow.setWorkingRefPoint((277000, 3880000))
 
 # <codecell>
@@ -277,98 +225,15 @@ interact(myPlot, azim=(0, 180), elev=(0, 90))
 
 # <codecell>
 
-import installation as inst
-from IPython.display import display, HTML
+import tcsInteract
 
 # <codecell>
 
-from matplotlib import cm
-
-cow = coweeta.Coweeta()
-cow.loadWatersheds()
-cow.loadGradientPlots()
-cow.setWorkingRefPoint((277000, 3880000))
-
-gridRes = 10
-
-
-
-
-itcs = inst.InstalledTCS(cow)
-p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
-itcs.positionMasts([p1,p2,p3],[40, 40, 50])
-itcs.positionPlatform([3000, 1100], 50, 200)
-
-
-def posPlatform(x, y, height, weight):
-    def tableRow(title, form, vals):
-        return '<tr><th>' + title + '</th>' + ' '.join([('<td>' + form + '</td>').format(x) for x in vals]) + '</tr>\n'
-
-    okay = itcs.positionPlatform([x, y], height, weight)
-    if not okay:
-        print 'One or more cables would need to be in compression to position the platform {}m above ({},{})'.format(height,x,y)
-        return
-
-    d, zt, zg = itcs.getTerrainBeneathCables(resolution=10)
-    zc, mc = itcs.getCableClearance(d, zt)
-    
-    if mc < 1.0:
-        attr = ' style="color:red;"'
-    else:
-        attr = ''
-    
-    s = '<table>\n'
-    s += tableRow('Cable', '{}', range(1, 4))
-    s += tableRow('Length [m]', '{:0.0f}', [itcs.tcs.c[i].length() for i in range(3)])
-    s += tableRow('Tension [N]', '{:0.0f}', itcs.tcs.tensionAtMasts())
-    s += '</table>\n'
-    s += '<p{}>Minimum canopy clearance: {:0.2f}m</p>\n'.format(attr, mc)
-
-    display(HTML(s))
-    
-    plt.figure(figsize=(12,8))
-
-    
-    ax = plt.subplot(111, aspect='equal')
-    pres.showInstallation2d(ax, itcs, [0,500], [1500,1500], showPlat=True)
- 
-    plt.figure(figsize=(12,8))
-    axt = range(3)
-    axb = range(3)
-    # fig, axes = plt.subplots(ncols=3, nrows=2, sharex=True, sharey=True)
-    # plt.setp(axes.flat, aspect=1.0, adjustable='box')
-
-   
-    axt[0] = plt.subplot(231, aspect='equal')
-    axt[1] = plt.subplot(232, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
-    axt[2] = plt.subplot(233, sharex=axt[0], sharey=axt[0]) #, aspect='equal')
-
-    axb[0] = plt.subplot(234, sharex=axt[0])
-    axb[1] = plt.subplot(235, sharex=axt[0], sharey=axb[0])
-    axb[2] = plt.subplot(236, sharex=axt[0], sharey=axb[0])
-
-    plt.setp(axt[1].get_yticklabels(), visible=False)
-    plt.setp(axt[2].get_yticklabels(), visible=False)
-    plt.setp(axb[1].get_yticklabels(), visible=False)
-    plt.setp(axb[2].get_yticklabels(), visible=False)
-    
-    
-    axt[0].set_ylabel('elevation [m]')
-    axb[0].set_ylabel('clearance from canopy [m]')
-    for i in range(3):
-
-        plt.setp(axt[i].get_xticklabels(), visible=False)
-        axt[i].plot(d[i], zc[i], 'b-')
-        axt[i].plot(d[i], zt[i], 'g-')
-        axt[i].plot(d[i], zg[i], 'g-')
-        axt[i].plot(d[i][-1], zc[i][-1], 'ro')
-        axt[i].plot([0, 5], [zc[i][0], zg[i][0]], 'r-')
-        
-        axb[i].set_xlabel('distance from mast {} [m]'.format(i+1))
-
-        axb[i].plot(d[i], zc[i] - zg[i], 'b')
-
-    
+myi = tcsInteract.InteractiveTscModel(cow)
+myi.initialMastPositions([[820, 1430], [1175, 1240], [1040, 790]])
+myi.initialMastHeights([40, 50, 50])
+myi.initialPlatformLoc([975, 1150], 50)
+myi.interact()
 
 # <markdowncell>
 
@@ -394,10 +259,12 @@ def posPlatform(x, y, height, weight):
 
 # <codecell>
 
-from IPython.html.widgets import interact
-# p1, p2, p3 = ([2332, 1280], [3175, 1240], [3040, 790])
+myi = tcsInteract.InteractiveTscModel(cow)
+myi.initialMastPositions([[332, 1280], [1175, 1240], [1040, 790]])
+myi.initialMastHeights([40, 40, 50])
+myi.initialPlatformLoc([975, 1150], 50)
+myi.interact()
 
-interact(posPlatform, x=(332,1175), y=(790,1280), height=(0, 200), weight=(0, 1000))
 
 # <markdowncell>
 

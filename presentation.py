@@ -14,6 +14,8 @@ def new3d():
     ax = plt.subplot(111, projection='3d') # , aspect='equal')
     plt.xlabel('metres E-W')
     plt.ylabel('metres N-S')
+    plt.zlabel('elevation [m]')
+
     return ax
 
 
@@ -144,5 +146,46 @@ def tree(ax, xc, yc, zb, h):
     ax.plot(x, y, z, 'g')
     ax.plot([xc, xc], [yc, yc], [zb, zb + h * 0.8], 'r')
 
+
+
+def coweetaMap():
+
+    import coweeta
+    plt.figure(figsize=(14,10))
+    ax = plt.subplot(111)
+
+    cow = coweeta.Coweeta()
+    cow.loadWatersheds()
+    cow.loadStreams()
+    cow.setWorkingRefPoint((277000, 3880000))
+
+    x, y, z = cow.surfaceMesh((-1e9, -1e9), (1e9, 1e9))
+    con = ax.contourf(x, y, z, 20, cmap=cm.coolwarm)
+    cb = plt.colorbar(con, shrink=0.6, extend='both')
+    cb.set_label('Elevation [m]')
+
+    def show(fn, ind, form, fill=False):
+        x, y, xc, yc = fn(ind)
+        if fill:
+            ax.fill(x, y, facecolor='red', alpha=0.5)
+
+
+        ax.plot(x, y, 'k')
+        ax.text(xc, yc, form.format(ind), horizontalalignment='center', verticalalignment='center')
+
+
+    for s in cow.streamSegs:
+
+        x = s[:,0] - cow.refPoint[0]
+        y = s[:,1] - cow.refPoint[1]
+        ax.plot(x, y,'b')
+
+    for w in cow.watershed.keys():
+        show(cow.wsMapCoords, w, 'WS{}', w==18)
+
+    ax.set_title('Coweeta Basin')
+
+    ax.set_xlabel('metres east of local reference')
+    ax.set_ylabel('metres north of local reference')
 
 
