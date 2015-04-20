@@ -8,13 +8,16 @@ import numpy as np
 
 import cableStatics as cs
 
+from IPython.display import display, HTML
+
+
 
 def new3d():
     plt.figure(figsize=(12,8))
     ax = plt.subplot(111, projection='3d') # , aspect='equal')
-    plt.xlabel('metres E-W')
-    plt.ylabel('metres N-S')
-    plt.zlabel('elevation [m]')
+    ax.set_xlabel('metres E-W')
+    ax.set_ylabel('metres N-S')
+    ax.set_zlabel('elevation [m]')
 
     return ax
 
@@ -187,5 +190,45 @@ def coweetaMap():
 
     ax.set_xlabel('metres east of local reference')
     ax.set_ylabel('metres north of local reference')
+
+
+
+
+def tcsMapAll(xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen, itcs):
+
+    gridRes = xr[1] - xr[0]
+    colHigh = zCeil - zGround
+    valid = np.isfinite(colHigh)
+    area = np.count_nonzero(valid) * gridRes ** 2
+    volume = np.sum(colHigh[valid]) * gridRes ** 2
+    s = '''<table>
+    <tr><th>Accessible ground area</th><td>{:,} $m^2$</td></tr>
+    <tr><th>Accessible airspace volume</th><td>{:,} $m^3$</td></tr>
+    '''.format(int(area), int(volume))
+    display(HTML(s))
+
+    def tcsMap(title, arg):
+        plt.figure(figsize=(14,10))
+
+        ax = plt.subplot(111, aspect='equal')
+        showInstallation2d(ax, itcs, [200,700], [1300,1500])
+
+        cs = plt.contourf(xr, yr, arg)
+
+        ax.set_title(title)
+
+        cb = plt.colorbar(cs, shrink=0.6)
+        cb.set_label(title)
+
+    tcsMap('Maximum Elevation of Platform [m]', zCeil)
+    tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
+    tcsMap('Height Range of Platform [m]', zCeil - zFloor)
+    tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
+    tcsMap('Minimum Safe Height of Platform Above Canopy [m]', zFloor - zGround)
+    for i in range(3):
+        title = 'Cable {0} Tension To Hold Platform At Minimum Elevation [N]'.format(i + 1)
+        tcsMap(title, floorTen[:,:,i])
+
+    tcsMap('Maximum Cable Tension To Hold Platform At Minimum Elevation [N]', np.max(floorTen, axis=2))
 
 

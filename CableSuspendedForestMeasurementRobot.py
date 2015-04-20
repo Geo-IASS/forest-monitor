@@ -29,15 +29,15 @@
 %autoreload 2
 %matplotlib inline
 
-# <codecell>
-
-import presentation as pres
-pres.showExampleSystem3d()
-
 # <markdowncell>
 
 # LiDAR
 # http://www.velodynelidar.com/lidar/hdlproducts/hdl32e.aspx
+
+# <codecell>
+
+import presentation as pres
+pres.showExampleSystem3d()
 
 # <headingcell level=2>
 
@@ -81,7 +81,7 @@ import coweeta
 
 # <codecell>
 
-c = cs.Cable(z1=5, z2=4, w=10,  0.035)
+c = cs.Cable(z1=5, z2=4, w=10, unitWeight=0.035)
 c.setHorizForce(1)  # newtons
 pres.showCable(c)
 
@@ -137,7 +137,7 @@ ts = lb2n(4000) # N
 
 # ##Bob Design
 # 
-# The design of the cable robot is simplified by the absence of snags.  Tensioning of the cables would keep the platform and all cables at a safe distance above the highest trees to avoid snagging.  If the system is to employ a bob the descends into the canopy and below then care will have to be paid to minimising and managing snags.  
+# The design of the cable robot is simplified by the absence of snags.  Tensioning of the cables would keep the platform and all cables at a safe distance above the highest trees to avoid snagging.  If the system is to employ a bob that descends into the canopy and below, then care will have to be paid to minimising and managing snags.  
 # 
 # * Use imaging/lidar to identify clear descent columns
 # * Monitor position and tilt of the bob as it descends
@@ -159,11 +159,11 @@ ts = lb2n(4000) # N
 
 # #Cable Winching
 # 
-# The cables are under significant tension which has an impact on how we manipulate them.  Energy expended moving an object distance $d$ against a force $f$ is the product of the two, i.e. $e = f \dot d$.   To reel in by 1m a cable under 1kN of tension will require 1kJ.  To do this in 1s will require a 1kW rated motor.  At the same time this winch is working the other winches would be reeling out cable under tension.  The energy 'stored'is these cables is either dumped in the winch motors or, ideally, harvested for distribution to the other winches or stored locally for this winch's later use.
+# The cables are under significant tension which has an impact on how we manipulate them.  Energy expended moving an object distance $d$ against a force $f$ is the product of the two, i.e. $e = f \dot d$.   To reel in by 1m a cable under 1kN of tension will require 1kJ.  To do this in 1s will require a 1kW rated motor.  At the same time this winch is working the other winches would be reeling out cable under tension.  The energy 'stored' in these cables is either dumped in the winch motors or, ideally, harvested for distribution to the other winches or stored locally for this winch's later use.
 # 
 # Distribution of the energy electrically would require cabling rated to 1kW.  110V, 9A.  This would need to be mounted on power poles and routed to a common point.  
 # 
-# Mechanical distrubution of the energy would be achived by running two of the cables to their respective masts and then back to the third mast.  All three winches would be located at this third mast.  The two non-winch masts would simply have pulley assemblies that let the cable run unencumbered.  They might have monitoring equipment such as odometers or cameras but these items could be powered by photovoltaics and batteries.  There are several disadvantages to this arrangement.  First, the vertical load on the unpowered masts is effectively doubled, as whatever tension is present on the section of cable running to the platform will exist on the return cable which will potentially pulling in much the same direction.  The winch mast has around three times the tension of a single cable.  
+# Mechanical distrubution of the energy would be achieved by running two of the cables to their respective masts and then back to the third mast.  All three winches would be located at this third mast.  The two non-winch masts would simply have pulley assemblies that let the cable run unencumbered.  They might have monitoring equipment such as odometers or cameras but these items could be powered by photovoltaics and batteries.  There are several disadvantages to this arrangement.  First, the vertical load on the unpowered masts is effectively doubled, as whatever tension is present on the section of cable running to the platform will exist on the return cable which will be pulling in much the same direction.  The winch mast has around three times the tension of a single cable.  
 # 
 # The use of return lines introduces an extra constraint on operation - there would be a minimum tension acheivable on these cables imposed by the terrain between the pulley masts and the winch mast. 
 # 
@@ -320,49 +320,6 @@ xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen = itcs.platformMap(
 
 # <codecell>
 
-# airspace volume accessible 
-
-gridRes = 10
-colHigh = zCeil - zGround
-valid = np.isfinite(colHigh)
-area = np.count_nonzero(valid) * gridRes ** 2
-volume = np.sum(colHigh[valid]) * gridRes ** 2
-s = '''<table>
-<tr><th>Accessible ground area</th><td>{:,} $m^2$</td></tr>
-<tr><th>Accessible airspace volume</th><td>{:,} $m^3$</td></tr>
-'''.format(int(area), int(volume))
-HTML(s)
-
-# <codecell>
-
-def tcsMap(title, arg):
-    plt.figure(figsize=(16,10))
-    
-    plt.jet()
-
-    ax = plt.subplot(111, aspect='equal')
-    pres.showInstallation2d(ax, itcs, [200,700], [1300,1500])
-    
-    cs = plt.contourf(xr, yr, arg)
-    ax.set_title(title)
-
-    plt.colorbar(cs, shrink=0.6)
-
-
-# <codecell>
-
-tcsMap('Maximum Elevation of Platform [m]', zCeil)
-tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
-tcsMap('Height Range of Platform [m]', zCeil - zFloor)
-tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
-tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
-tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,0])
-tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,1])
-tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen[:,:,2])
-
-
-# <codecell>
-
 
 itcs = inst.InstalledTCS(cow)
 p1, p2, p3 = ([332, 1280], [1175, 1240], [1040, 790])
@@ -451,39 +408,6 @@ xr, yr, zCeil, zFloor, zGround, floorTen = itcs.platformMap(
 )
 
 # <codecell>
-
-def tcsMap(title, arg):
-    plt.figure(figsize=(14,10))
-    
-
-    ax = plt.subplot(111, aspect='equal')
-    pres.showInstallation2d(ax, itcs, [200,700], [1300,1500])
-    
-    cs = plt.contourf(xr, yr, arg)
-    
-    ax.set_title(title)
-
-    cb = plt.colorbar(cs, shrink=0.6)
-    cb.set_label(title)
-
-def tcsMapAll():
-
-    colHigh = zCeil - zGround
-    valid = np.isfinite(colHigh)
-    area = np.count_nonzero(valid) * gridRes ** 2
-    volume = np.sum(colHigh[valid]) * gridRes ** 2
-    s = '''<table>
-    <tr><th>Accessible ground area</th><td>{:,} $m^2$</td></tr>
-    <tr><th>Accessible airspace volume</th><td>{:,} $m^3$</td></tr>
-    '''.format(int(area), int(volume))
-    HTML(s)    
-    
-    tcsMap('Maximum Elevation of Platform [m]', zCeil)
-    tcsMap('Minimum Safe Elevation of Platform [m]', zFloor)
-    tcsMap('Height Range of Platform [m]', zCeil - zFloor)
-    tcsMap('Maximum Height of Platform Above Canopy [m]', zCeil - zGround)
-    tcsMap('Minimum Safe Height of Platform  Above Canopy [m]', zFloor - zGround)
-    tcsMap('Cable Tension To Hold Platform At Minimum Elevation [N]', floorTen)
 
     
 
@@ -718,6 +642,41 @@ tcsMapAll()
 # * short mission length unless gas engines are used
 # * can one be designed to land on canopy?
 # * how would it be anchored?
+
+# <codecell>
+
+#myi = tcsInteract.InteractiveTscModel(cow)
+#myi.initialMastPositions([])
+#myi.initialMastHeights([40, 50, 50])
+#myi.initialPlatformLoc([975, 1150], 50)
+#myi.interact()
+import cableStatics as cs
+import coweeta
+import installation as inst
+
+reload(inst)
+
+cow = coweeta.Coweeta()
+cow.loadWatersheds()
+cow.loadGradientPlots()
+cow.setWorkingRefPoint((277000, 3880000))
+
+gridRes = 10
+itcs = inst.InstalledTCS(cow)
+p1, p2, p3 = ([820, 1430], [1175, 1240], [1040, 790])
+
+#itcs.positionMasts([p1,p2,p3],[40,50,50])
+#itcs.positionMasts([p1,p2,p3],[50,60,60])
+itcs.positionMasts([p1,p2,p3],[50,40,40])
+xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen = itcs.platformMap(
+   cableRes=3, gridRes=gridRes, heightRes=0.5, minClearance=2, maxTension=2500, weight=200,
+   showProgress=True
+)
+
+
+# <codecell>
+
+pres.tcsMapAll(xr, yr, zCeil, zFloor, zGround, floorTen, ceilTen, itcs)
 
 # <codecell>
 

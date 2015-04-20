@@ -51,14 +51,9 @@ class InstalledTCS:
 
     def getCableClearance(self, d, zt):
 
-        zc = range(3)
-        minClear = range(3)
+        zc = [self.tcs.c[i].cableZ(d[i]) for i in range(3)]
 
-        for i in range(3):
-            zc[i] = self.tcs.c[i].cableZ(d[i])
-
-            minClear[i] = min(zc[i] - zt[i])
-
+        minClear = [min(zc[i] - zt[i]) for i in range(3)]
 
         return zc, min(minClear)
 
@@ -86,7 +81,7 @@ class InstalledTCS:
                 sys.stdout.write(ch)
                 sys.stdout.flush()
 
-        # used to determine is a point is within the mast defined triangle
+        # used to determine if a point is within the mast defined triangle
         import matplotlib.path as mplp
 
         def roundRange(vals, res):
@@ -152,9 +147,6 @@ class InstalledTCS:
                 ceiling = self.tcs.ceiling(p)
                 floor = self.terrain.canopySurface(p)
 
-                #TEMP!!! print ceiling, floor
-                #TEMP!!! die
-
                 clear = ceiling - floor
 
                 if clear < 0:
@@ -171,10 +163,13 @@ class InstalledTCS:
                     # we should really be able to solve the equations for this location ...
                     raise RuntimeError('ceiling error', ceiling, floor, x, y, z)
 
+                lastGoodZ = z
+                lastGoodTen = self.tcs.tensionAtMasts()
                 while step > heightRes:
                     step *= 0.5
                     ten = self.tcs.tensionAtMasts()
                     if max(ten) > maxTension:
+                        # Tension required for this height is too great, lower the platform.
                         z -= step
                     else:
                         lastGoodZ = z
@@ -189,7 +184,7 @@ class InstalledTCS:
                 p3 = (x,y,lastGoodZ)
                 self.tcs.setLoad(p3, weight)
                 if not self.tcs.tune():
-                    raise RuntimeError('ceiling error')
+                    raise RuntimeError('ceiling error', p3)
 
                 dist, zt, zg = self.getTerrainBeneathCables(resolution=cableRes)
                 zc, mc = self.getCableClearance(d=dist, zt=zt)
